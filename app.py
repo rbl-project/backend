@@ -40,8 +40,7 @@ def create_app():
 
     # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("POSTGRESS_DATABASE_URL")
-    # app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://khkqprkwhxtrka:88a1f1ff3f36ff4f807695af99b10567da845e70ade7f29f6991413b74f0b0db@ec2-54-152-28-9.compute-1.amazonaws.com:5432/d2829fk0fdcjc6'
-
+    
     db.init_app(app)
     migrate.init_app(app, db)
     add_end_points(app)
