@@ -45,6 +45,6 @@ def create_app():
     add_end_points(app)
     set_logger()
 
-    return app
+    return app, db
 
-app = create_app()
+app, db = create_app()
