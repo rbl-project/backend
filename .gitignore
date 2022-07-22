@@ -12,7 +12,6 @@ dist/
 build/
 *.egg-info/
 *.db
-migrations/
 .vscode
 *.sqlite3
 vuln-list/
