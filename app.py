@@ -37,14 +37,18 @@ def create_app():
     '''
     app = Flask(__name__)
     CORS(app)
-    
+
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("POSTGRESS_DATABASE_URL")
 
     db.init_app(app)
     migrate.init_app(app, db)
+
+    with app.app_context():
+        db.create_all()
+
     add_end_points(app)
     set_logger()
 
-    return app, db
+    return app
 
-app, db = create_app()
+app = create_app()
