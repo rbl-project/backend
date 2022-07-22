@@ -21,7 +21,8 @@ def register():
         email = request.json.get("email")
         password = request.json.get("password")
         name = request.json.get("name")
-        user = Users(name=name, email=email)
+        phone = request.json.get("phone")
+        user = Users(name=name, email=email, phone=phone)
         user.setPassword(password)
 
         user.save()
