@@ -52,6 +52,12 @@ Run `sudo -u postgres psql`. This will open the psql command line
 ### Basic DB commands
 ```
 1. postgres=# \c rbl_backend;  --> to change the database
-2. postgres=# \l --> To list the tables
+2. postgres=# \l --> To list the databases
+3. postgres=# \d --> To list all the tables in current database
 3. Normal SQL Commands
 ```
+### Database Troubleshooting
+
+If at all any error happens while upgrading the database on heroku using `heroku run flask db upgrade` then we having conflicting version in alembic_table and migrations folders.
+
+In this case kidly drop the table alembic_version and run `heroku run flask db upgrade` again to make the table with latest schema.
