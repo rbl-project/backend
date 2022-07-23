@@ -36,9 +36,13 @@ def create_app():
     Function to create flask app
     '''
     app = Flask(__name__)
+    
     CORS(app)
+    if os.getenv("ENVIRONMENT") == "development":
+        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("LOCAL_POSTGRES_URL")
+    elif os.getenv("ENVIRONMENT") == "production":
+        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("POSTGRESS_DATABASE_URL")
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("POSTGRESS_DATABASE_URL")
 
     db.init_app(app)
     migrate.init_app(app, db)
