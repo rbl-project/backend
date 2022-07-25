@@ -43,7 +43,7 @@ Note: The final version your migration is what that will be used to update the d
 
 ### Database Visualization
 1. **On Production**
-Run `heroku pg:psql --a rbl-backend` to see the database in terminal
+Run `heroku pg:psql --app rbl-backend` to see the database in terminal
 
 2. **For local db**
 
