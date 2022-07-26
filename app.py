@@ -44,7 +44,7 @@ def set_logger():
     dictConfig({
         'version': 1,
         'formatters': {'default': {
-            'format': '[%(asctime)s] [%(levelname)s] in [%(module)s]:[%(user_email)s] %(message)s',
+            'format': '[%(asctime)s] [%(levelname)s] in [%(module)s]: %(message)s',
         }},
         'handlers': {'wsgi': {
             'class': 'logging.StreamHandler',
@@ -57,21 +57,21 @@ def set_logger():
         }
     })
 
-    old_factory = logging.getLogRecordFactory()
+    # old_factory = logging.getLogRecordFactory()
 
-    def record_factory(*args, **kwargs):
-        record = old_factory(*args, **kwargs)
-        if current_user.is_authenticated:
-            user = Users.query.get(int(current_user.id))
-            if user:
-                record.user_email = user.email
-            else:
-                record.user_email = "No User"
-        else:
-            record.user_email = "No User"
-        return record
+    # def record_factory(*args, **kwargs):
+    #     record = old_factory(*args, **kwargs)
+    #     if current_user.is_authenticated:
+    #         user = Users.query.get(int(current_user.id))
+    #         if user:
+    #             record.user_email = user.email
+    #         else:
+    #             record.user_email = "No User"
+    #     else:
+    #         record.user_email = "No User"
+    #     return record
 
-    logging.setLogRecordFactory(record_factory)
+    # logging.setLogRecordFactory(record_factory)
 
 def add_end_points(app):
     '''
