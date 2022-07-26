@@ -6,7 +6,9 @@ from logging.config import dictConfig
 from manage.db_setup import db
 from manage.db_setup import migrate
 from api import (
-    user_api
+    user_api,
+    dataset_api,
+    data_visulization_api
 )
 from flask_login import LoginManager, current_user
 from dotenv import load_dotenv
@@ -76,6 +78,8 @@ def add_end_points(app):
     Function to register the api end points
     '''
     app.register_blueprint(user_api.userAPI, url_prefix = "/api")
+    app.register_blueprint(dataset_api.datasetAPI, url_prefix = "/api")
+    app.register_blueprint(data_visulization_api.dataVisulizationAPI, url_prefix = "/api")
 
 def create_app():
     '''

@@ -6,6 +6,7 @@ from utilities.respond import respond
 from flask_restful import  Api
 from flask import request
 from flask_login import login_user, login_required, logout_user, current_user
+
 userAPI = Blueprint("userAPI", __name__)
 userAPI_restful = Api(userAPI)
 
@@ -24,6 +25,10 @@ def welcome():
 def register():
     err = None
     try:
+        # logout current session is someone is logged in
+        if current_user.is_authenticated:
+            logout()
+            
         email = request.json.get("email")
         if not email:
             err = "Email is required"
@@ -58,8 +63,8 @@ def register():
             "msg":"User Registered Successfully"
         }
         return respond(data=res, code=201)
-    except Exception as ex:
-        app.logger.error("Error in registering the user. Error=> %s. Exception=> %s",err, str(ex))
+    except Exception as e:
+        app.logger.error("Error in registering the user. Error=> %s. Exception=> %s",err, str(e))
         if not err:
             err = "Error in registration"
         return respond(error=err)
