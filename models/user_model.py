@@ -7,6 +7,7 @@ class Users(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     email = db.Column(db.String(120), nullable=False, unique=True)
+    phone = db.Column(db.String())
     db_count = db.Column(db.Integer())
     date_added = db.Column(db.DateTime, default=datetime.datetime.now())
     password_hash = db.Column(db.String(128))
