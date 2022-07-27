@@ -75,9 +75,13 @@ def register():
 def logout():
     err = None
     try:
+        user = Users.query.filter_by(id=current_user.id).first()
+        if not user:
+            err = "No such user exits"
+            raise
         logout_user()
 
-        app.logger.info("You Have Been Logged Out!  Thanks For Stopping By...")
+        app.logger.info("%s Have Been Logged Out!  Thanks For Stopping By...",str(user.email))
 
         return respond(data="Logged Out Successfully")
     except Exception as e:
@@ -121,4 +125,23 @@ def login():
         app.logger.error("Error in login. Error=> %s. Exception=> %s",err, str(e))
         if not err:
             err = "Error in Login"
+        return respond(error=err)
+
+@userAPI.route("/all-users", methods=["GET"])
+def get_all_users():
+    err = None
+    try:
+        all_users = Users.query.all()
+        users = []
+        for user in all_users:
+            users.append(user.to_json())
+        res = {
+            "msg":"Fethced all the users",
+            "users": users
+        }
+        return respond(data=res)
+    except Exception as e:
+        app.logger.error("Error in fetching all the users. Error=> %s. Exception=> %s",err, str(e))
+        if not err:
+            err = "Error in fetching all the users"
         return respond(error=err)
