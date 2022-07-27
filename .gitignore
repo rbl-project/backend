@@ -17,4 +17,3 @@ build/
 vuln-list/
 .bashrc
 .env
-migrations/
