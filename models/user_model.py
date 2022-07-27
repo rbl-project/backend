@@ -1,3 +1,4 @@
+from email.policy import default
 from manage.db_setup import db
 import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -8,7 +9,7 @@ class Users(db.Model, UserMixin):
     name = db.Column(db.String(200), nullable=False)
     email = db.Column(db.String(120), nullable=False, unique=True)
     phone = db.Column(db.String())
-    db_count = db.Column(db.Integer())
+    db_count = db.Column(db.Integer(), default=0)
     date_added = db.Column(db.DateTime, default=datetime.datetime.now())
     password_hash = db.Column(db.String(128))
 

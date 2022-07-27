@@ -61,7 +61,7 @@ def set_logger():
 
     def record_factory(*args, **kwargs):
         record = old_factory(*args, **kwargs)
-        if current_user.is_authenticated:
+        if current_user and current_user.is_authenticated:
             user = Users.query.get(int(current_user.id))
             if user:
                 record.user_email = user.email
