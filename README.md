@@ -69,10 +69,16 @@ Note: The final version your migration is what that will be used to update the d
 ### Database Schema Updates
 1. Make your changes in schema
 2. Run the local migration command so that we can generate the migration versions that can be used later to update the db on heroku
-`flask db migrate`
+```
+1. flask db migrate
+2. flask db upgrade
+
+```
 3. Then simply push your code to master, the moment code comes to master, it will be automatically deployed to heroku.
 4. Once the build is finished and code is deployed, now you can upgrade the db on heroku using the migrations we have generated locally earlier in step 2
-`heroku run flask db upgrade` Run this in your terminal
+`heroku run flask db upgrade` Run this in your terminal.
+
+*NOTE*  DO NOT PUSH MULTIPLE MIGRATIONS ON HEROKU! THIS WOULD SIMPLY DESTROY THE HEROKU DATABASE AND CREATE A LOT OF PROBLEMS DUE TO MISS MATCH OF VERSION ON HEROKU AND LOCAL.
 
 ### Database Visualization
 1. **On Production**
