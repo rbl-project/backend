@@ -57,21 +57,21 @@ def set_logger():
         }
     })
 
-    # old_factory = logging.getLogRecordFactory()
+    old_factory = logging.getLogRecordFactory()
 
-    # def record_factory(*args, **kwargs):
-    #     record = old_factory(*args, **kwargs)
-    #     if current_user.is_authenticated:
-    #         user = Users.query.get(int(current_user.id))
-    #         if user:
-    #             record.user_email = user.email
-    #         else:
-    #             record.user_email = "No User"
-    #     else:
-    #         record.user_email = "No User"
-    #     return record
+    def record_factory(*args, **kwargs):
+        record = old_factory(*args, **kwargs)
+        if current_user.is_authenticated:
+            user = Users.query.get(int(current_user.id))
+            if user:
+                record.user_email = user.email
+            else:
+                record.user_email = "No User"
+        else:
+            record.user_email = "No User"
+        return record
 
-    # logging.setLogRecordFactory(record_factory)
+    logging.setLogRecordFactory(record_factory)
 
 def add_end_points(app):
     '''
