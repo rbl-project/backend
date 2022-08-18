@@ -14,7 +14,7 @@ To make sure WSL is running, run `wsl -l -v` in Poswershell. It must say that no
 3. Install the dependencies `pip install -r requirements.txt`
 4. To run the project locally run `gunicorn --reload --bind 127.0.0.1:8000 app:app`. ( Bedfore this the DB setup must be done. Follow below)
 
-### Database Setup
+### First Time Local Database Setup
 1. Install the postgresql in your system. 
 ```
 # updates
@@ -66,7 +66,18 @@ flask db upgrade
 ```
 Note: The final version your migration is what that will be used to update the database on heroku. So keep a note that the final version of migration is what you need in production.
 
+### First Time Prod DB Setup
+1. Run `heroku run python -a rbl-backend` in another terminal.
+2. Now in python shell run the below command.
+```
+from app import create_app
+app = create_app()
+app.app_context().push()
+db.create_all()
+```
+
 ### Database Schema Updates
+- Local Database:
 1. Make your changes in schema
 2. Run the local migration command so that we can generate the migration versions that can be used later to update the db on heroku
 ```
@@ -74,15 +85,14 @@ Note: The final version your migration is what that will be used to update the d
 2. flask db upgrade
 
 ```
-3. Then simply push your code to master, the moment code comes to master, it will be automatically deployed to heroku.
-4. Once the build is finished and code is deployed, now you can upgrade the db on heroku using the migrations we have generated locally earlier in step 2
-`heroku run flask db upgrade` Run this in your terminal.
 
-*NOTE*  DO NOT PUSH MULTIPLE MIGRATIONS ON HEROKU! THIS WOULD SIMPLY DESTROY THE HEROKU DATABASE AND CREATE A LOT OF PROBLEMS DUE TO MISS MATCH OF VERSION ON HEROKU AND LOCAL.
+- Prod Database:
+1. Make your changes in schema manually by going in supabase by running SQL Queries
 
 ### Database Visualization
 1. **On Production**
-Run `heroku pg:psql --app rbl-backend` to see the database in terminal
+Run `heroku pg:psql --app rbl-backend` to see the database in terminal ( Earlier )
+Go to Supabase[ https://app.supabase.com/project/ppsqyffbvyxpbaeasjig/database/tables ] and see the database. ( Now )
 
 2. **For local db**
 
