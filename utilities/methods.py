@@ -1,3 +1,5 @@
+"""Common Methods among all the APIs"""
+
 import re
 
 def is_email_valid(email):
