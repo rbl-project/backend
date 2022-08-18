@@ -17,7 +17,7 @@ def welcome():
     user = Users.query.filter_by(id=id).first()
     app.logger.info("Welcome %s", user.name)
     res = { 
-        'msg':'Welcome to RBL Project backend.'
+        'msg':f'Hey {user.name}! Wish you the great data science session!'
     }
     return respond(data=res)
 

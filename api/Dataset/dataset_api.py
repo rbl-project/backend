@@ -13,6 +13,7 @@ from utilities.constants import ALLOWED_DB_PER_USER
 datasetAPI = Blueprint("datasetAPI", __name__)
 datasetAPI_restful = Api(datasetAPI)
 
+# Api to upload dataset
 @datasetAPI.route("/upload-dataset", methods=['POST'])
 @login_required
 def upload_dataset():
@@ -58,6 +59,8 @@ def upload_dataset():
             err = 'Error in uploading the dataset'
         return respond(error=err)
 
+
+# Api to delete a dataset
 @datasetAPI.route("/delete-dataset", methods=["POST"])
 @login_required
 def delete_dataset():
@@ -72,6 +75,10 @@ def delete_dataset():
         if not dataset_name:
             err = "Dataset name is required that is to be deleted"
 
+        tables = db.engine.table_names()
+        if f'{dataset_name.split(".")[0]}_{user.id}' not in tables:
+            err = "No such database exists"
+            raise
         # not the right way to do this. But due to time issue, this is done. Don't use raw query
         delete_sql_query = text(f'DROP TABLE "{dataset_name.split(".")[0]}_{user.id}";')
 
@@ -93,4 +100,70 @@ def delete_dataset():
         app.logger.error("Error in deleting the dataset. Error=> %s. Exception=> %s", err, str(e))
         if not err:
             err = 'Error in deleting the dataset'
+        return respond(error=err)
+
+
+# Api to fetch all the tables in the database
+@datasetAPI.route("/get-datasets", methods=["GET"])
+@login_required
+def get_datasets():
+    err = None
+    try:
+        user = Users.query.filter_by(id=current_user.id).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        tables = db.engine.table_names()
+        tables = [t for t in tables if t.endswith(f'_{user.id}')]
+        res = {
+            "tables":tables
+        }
+        return respond(data=res)
+
+    except Exception as e:
+        app.logger.error("Error in getting the datasets. Error=> %s. Exception=> %s", err, str(e))
+        if not err:
+            err = 'Error in getting the datasets'
+        return respond(error=err)
+
+
+# Api to fetch all the columns in the table
+@datasetAPI.route("/get-columns", methods=["POST"])
+@login_required
+def get_columns():
+    err = None
+    try:
+        user = Users.query.filter_by(id=current_user.id).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        table_name = request.json.get("dataset_name")
+        if not table_name:
+            err = "Dataset name is required that is to be deleted"
+
+        tables = db.engine.table_names()
+        if f'{table_name.split(".")[0]}_{user.id}' not in tables:
+            err = "No such database exists"
+            raise
+        # not the right way to do this. But due to time issue, this is done. Don't use raw query
+        columns_sql_query = text(f'SELECT * FROM "{table_name.split(".")[0]}_{user.id}" LIMIT 1;')
+
+        try:
+            result = db.engine.execute(columns_sql_query)
+        except Exception as e:
+            err = "Some error in getting the columns. Please try again later"
+            raise e
+        
+        columns = [c[0] for c in result.cursor.description]
+        res = {
+            "columns":columns
+        }
+        return respond(data=res)
+
+    except Exception as e:
+        app.logger.error("Error in getting the columns. Error=> %s. Exception=> %s", err, str(e))
+        if not err:
+            err = 'Error in getting the columns'
         return respond(error=err)
