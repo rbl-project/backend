@@ -8,7 +8,7 @@ To make sure WSL is running, run `wsl -l -v` in Poswershell. It must say that no
 
 ### Project Setup
 0. Make a `rbl_backend` folder in home directory. Inside that directory make the virutal environment
-`python3 -m venv venv`. You might be prompted to intall venv package, follow the given command there, and install the package and run the command again. Now, Clone the repo in same directory.
+`python3 -m venv venv`. You might be prompted to intall venv package, follow the given command `sudo apt-get install python3-virtualenv` , and install the package and run the command again. Now, Clone the repo in same directory.
 1. Ask the owner ( prashantdwivedi194@gmail.com ) for environment variables
 2. Make .env file locally in main project folder `rbl-backend` and put those variables there.
 3. Install the dependencies `pip install -r requirements.txt`
