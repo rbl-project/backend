@@ -1,5 +1,10 @@
-from flask import Blueprint, send_file
-from flask import current_app as app
+from flask import (
+    Blueprint,
+    request,
+    current_app as app,
+    send_file,
+    Response
+)
 from models.user_model import Users
 from api.DataVisulization.utilities import getImage
 from utilities.respond import respond
@@ -8,7 +13,6 @@ from utilities.methods import (
     get_dataset_name
 )
 from flask_restful import  Api
-from flask import request
 from flask_login import current_user, login_required
 import pandas as pd
 from manage.db_setup import db
@@ -88,9 +92,11 @@ def two_var_correlation():
         
         plot_image = getImage(plt)
   
-        return send_file(plot_image,
-                     attachment_filename='plot.png',
-                     mimetype='image/png')
+        # return send_file(plot_image,
+        #              attachment_filename='plot.png',
+        #              mimetype='image/png')
+        return Response(plot_image, mimetype='image/png',headers={"Content-disposition":
+            "attachment; filename=plot.png"})
 
     except Exception as e:
         app.logger.error("Error in two var correlation. Error=> %s. Exception=> %s", err, str(e))
@@ -131,9 +137,11 @@ def all_var_correlation():
         
         plot_image = getImage(plt)
   
-        return send_file(plot_image,
-                     attachment_filename='plot.png',
-                     mimetype='image/png')
+        # return send_file(plot_image,
+        #              attachment_filename='plot.png',
+        #              mimetype='image/png')
+        return Response(plot_image, mimetype='image/png',headers={"Content-disposition":
+            "attachment; filename=plot.png"})
 
     except Exception as e:
         app.logger.error("Error in all var correlation. Error=> %s. Exception=> %s", err, str(e))

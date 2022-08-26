@@ -1,9 +1,14 @@
-from flask import Blueprint
-from flask import current_app as app
+from flask import (
+    Blueprint,
+    request,
+    current_app as app,
+    send_file,
+    Response
+)
 from models.user_model import Users
+from utilities.methods import get_dataset, get_dataset_name
 from utilities.respond import respond
 from flask_restful import  Api
-from flask import request
 from flask_login import current_user, login_required
 import pandas as pd
 from manage.db_setup import db
@@ -102,6 +107,39 @@ def delete_dataset():
             err = 'Error in deleting the dataset'
         return respond(error=err)
 
+
+# Api to export a dataset
+@datasetAPI.route("/export-dataset", methods=["POST"])
+@login_required
+def export_dataset():
+    err = None
+    try:
+        user = Users.query.filter_by(id=current_user.id).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+
+        dataset_name = get_dataset_name(user.id, dataset_name, db)
+        df = get_dataset(dataset_name, db)
+
+        df = df.to_csv(index=False)
+
+        return Response(
+            df,
+            mimetype="text/csv",
+            headers={"Content-disposition":
+            "attachment; filename=filename.csv"}
+        )
+
+    except Exception as e:
+        app.logger.error("Error in exporting the dataset. Error=> %s. Exception=> %s", err, str(e))
+        if not err:
+            err = 'Error in exporting the dataset'
+        return respond(error=err)
 
 # Api to fetch all the tables in the database
 @datasetAPI.route("/get-datasets", methods=["GET"])
