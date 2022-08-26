@@ -1,21 +1,21 @@
 from datetime import timedelta
-from api.DataVisulization import data_visualization_api
-from api.User import user_api
 from flask import Flask
 from flask_cors import CORS
 import logging
 from logging.config import dictConfig
 from manage.db_setup import db
 from manage.db_setup import migrate
-from api.Dataset import (
-    dataset_api
-)
 from flask_login import LoginManager, current_user
 from dotenv import load_dotenv
 import os
-
 from models.user_model import Users
 from utilities.respond import respond
+# APIs
+from api.DataVisulization import data_visualization_api
+from api.User import user_api
+from api.Dataset import dataset_api
+from api.DataOverview import data_overview_api
+
 load_dotenv()
 
 def set_login_manager(app):
@@ -80,6 +80,7 @@ def add_end_points(app):
     app.register_blueprint(user_api.userAPI, url_prefix = "/api")
     app.register_blueprint(dataset_api.datasetAPI, url_prefix = "/api")
     app.register_blueprint(data_visualization_api.dataVisulizationAPI, url_prefix = "/api")
+    app.register_blueprint(data_overview_api.dataOverviewAPI, url_prefix = "/api")
 
 def create_app():
     '''

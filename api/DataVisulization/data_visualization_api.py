@@ -1,15 +1,17 @@
-import io
 from flask import Blueprint, send_file
 from flask import current_app as app
 from models.user_model import Users
 from api.DataVisulization.utilities import getImage
 from utilities.respond import respond
+from utilities.methods import (
+    get_dataset,
+    get_dataset_name
+)
 from flask_restful import  Api
 from flask import request
 from flask_login import current_user, login_required
 import pandas as pd
 from manage.db_setup import db
-from sqlalchemy import text
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -32,20 +34,9 @@ def data_describe():
             err = "Dataset name is required"
             raise
         
-        dataset_name = f'{dataset_name.split(".")[0]}_{user.id}'
-        if not dataset_name in db.engine.table_names():
-            err = "No such database exists"
-            raise
-        
-        try:
-            sql_query = text(f'select * from "{dataset_name}"')
-            dataset = db.engine.execute(sql_query)
-        except Exception as e:
-            err = "Error in describe functionality"
-            app.logger.info("Error in executing the SQL Query")
-            raise e
-        
-        df = pd.DataFrame(dataset)
+        dataset_name = get_dataset_name(user.id, dataset_name, db)
+        df = get_dataset(dataset_name, db)
+
         describe_data = df.describe()
 
         describe_data = describe_data.to_dict()
@@ -79,20 +70,9 @@ def two_var_correlation():
             err = "Dataset name is required"
             raise
         
-        dataset_name = f'{dataset_name.split(".")[0]}_{user.id}'
-        if not dataset_name in db.engine.table_names():
-            err = "No such database exists"
-            raise
-        
-        try:
-            sql_query = text(f'select * from "{dataset_name}"')
-            dataset = db.engine.execute(sql_query)
-        except Exception as e:
-            err = "Error in get two var correlation functionality"
-            app.logger.info("Error in executing the SQL Query")
-            raise e
-        
-        df = pd.DataFrame(dataset)
+        dataset_name = get_dataset_name(user.id, dataset_name, db)
+        df = get_dataset(dataset_name, db)
+
         col1 = request.json.get("col1")
         col2 = request.json.get("col2")
         if not col1 or not col2:
@@ -135,20 +115,9 @@ def all_var_correlation():
             err = "Dataset name is required"
             raise
         
-        dataset_name = f'{dataset_name.split(".")[0]}_{user.id}'
-        if not dataset_name in db.engine.table_names():
-            err = "No such database exists"
-            raise
+        dataset_name = get_dataset_name(user.id, dataset_name, db)
+        df = get_dataset(dataset_name, db)
         
-        try:
-            sql_query = text(f'select * from "{dataset_name}"')
-            dataset = db.engine.execute(sql_query)
-        except Exception as e:
-            err = "Error in get all var correlation functionality"
-            app.logger.info("Error in executing the SQL Query")
-            raise e
-        
-        df = pd.DataFrame(dataset) #corr.style.background_gradient(cmap='coolwarm')
         corr = df.corr()
 
         f, ax = plt.subplots(figsize=(11, 9))
