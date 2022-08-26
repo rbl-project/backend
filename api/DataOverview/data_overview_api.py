@@ -89,16 +89,9 @@ def get_columns():
 
         dataset_name = get_dataset_name(user.id, dataset_name, db)
 
-        # not the right way to do this. But due to time issue, this is done. Don't use raw query
-        columns_sql_query = text(f'SELECT * FROM "{dataset_name}" LIMIT 1;')
-
-        try:
-            result = db.engine.execute(columns_sql_query)
-        except Exception as e:
-            err = "Some error in getting the columns. Please try again later"
-            raise e
+        df = get_dataset(dataset_name, db)
         
-        columns = [c[0] for c in result.cursor.description]
+        columns = df.columns.to_list()
         res = {
             "columns":columns
         }
