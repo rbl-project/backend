@@ -74,6 +74,8 @@ def two_var_correlation():
             err = "Dataset name is required"
             raise
         
+        plot_type = request.json.get("plot_type", None)
+
         dataset_name = get_dataset_name(user.id, dataset_name, db)
         df = get_dataset(dataset_name, db)
 
@@ -87,16 +89,33 @@ def two_var_correlation():
             err = "No such column exists"
             raise
         
-        correlation = df[[col1, col2]].corr()
-        plt.matshow(correlation)
-        
-        plot_image = getImage(plt)
+        if plot_type == "scatter":
+            plt.scatter(df[col1].tolist(), df[col2].tolist())
+
+            plt.title(f"{col1} vs {col2}")
+            plt.xlabel(col1)
+            plt.ylabel(col2)
+
+            plot_image = getImage(plt)
+            filename = "scatter_plot.png"
+            
+        elif plot_type == "matrix":
+            correlation = df[[col1, col2]].corr()
+            plt.matshow(correlation)
+
+            plot_image = getImage(plt)
+            filename = "correlation_matrix.png"
   
         # return send_file(plot_image,
         #              attachment_filename='plot.png',
         #              mimetype='image/png')
-        return Response(plot_image, mimetype='image/png',headers={"Content-disposition":
-            "attachment; filename=plot.png"})
+        return Response(
+                            plot_image, 
+                            mimetype='image/png',
+                            headers={
+                                "Content-disposition": f"attachment; filename={filename}"
+                                }
+                        )
 
     except Exception as e:
         app.logger.error("Error in two var correlation. Error=> %s. Exception=> %s", err, str(e))
