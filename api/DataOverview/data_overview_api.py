@@ -37,6 +37,9 @@ def get_dataset_overview():
             err = "Dataset name is required"
 
         dataset_name = get_dataset_name(user.id, dataset_name, db)
+        if not dataset_name:
+            err = f"Dataset not found"
+            raise
         df = get_dataset(dataset_name, db)
 
         head = df.head().to_dict(orient="records") # to send each row as a dictionary
@@ -88,6 +91,9 @@ def get_columns():
             err = "Dataset name is required"
 
         dataset_name = get_dataset_name(user.id, dataset_name, db)
+        if not dataset_name:
+            err = f"Dataset not found"
+            raise
 
         df = get_dataset(dataset_name, db)
         

@@ -15,7 +15,7 @@ def is_email_valid(email):
 def get_dataset_name(user_id, dataset_name, db):
     dataset_name = f'{dataset_name.split(".")[0]}_{user_id}'
     if not dataset_name in db.engine.table_names():
-        raise "No such database exists"
+        return None
     return dataset_name
 
 def get_dataset(dataset_name, db):
