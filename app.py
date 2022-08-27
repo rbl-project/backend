@@ -15,6 +15,7 @@ from api.DataVisulization import data_visualization_api
 from api.User import user_api
 from api.Dataset import dataset_api
 from api.DataOverview import data_overview_api
+from api.DataCleaning import data_cleaning_api
 
 load_dotenv()
 
@@ -81,6 +82,7 @@ def add_end_points(app):
     app.register_blueprint(dataset_api.datasetAPI, url_prefix = "/api")
     app.register_blueprint(data_visualization_api.dataVisulizationAPI, url_prefix = "/api")
     app.register_blueprint(data_overview_api.dataOverviewAPI, url_prefix = "/api")
+    app.register_blueprint(data_cleaning_api.dataCleaningAPI, url_prefix = "/api")
 
 def create_app():
     '''

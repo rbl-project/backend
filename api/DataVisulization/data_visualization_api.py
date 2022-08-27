@@ -75,7 +75,7 @@ def two_var_correlation():
             err = "Dataset name is required"
             raise
         
-        plot_type = request.json.get("plot_type", None)
+        plot_type = request.json.get("plot_type", "scatter")
 
         dataset_name = get_dataset_name(user.id, dataset_name, db)
         if not dataset_name:

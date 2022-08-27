@@ -18,3 +18,5 @@ vuln-list/
 .bashrc
 .env
 migrations/
+.ipynb
+.csv

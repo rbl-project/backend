@@ -46,7 +46,7 @@ def upload_dataset():
         df = pd.read_csv(dataset)
         df.columns = [c.lower() for c in df.columns] # PostgreSQL doesn't like capitals or spaces
 
-        df.to_sql(dataset_name, db.engine)
+        df.to_sql(dataset_name, db.engine) # This will re insert the table
         
         user.db_count = user.db_count + 1
         user.save()
