@@ -1,9 +1,14 @@
-from flask import Blueprint
-from flask import current_app as app
+from flask import (
+    Blueprint,
+    request,
+    current_app as app,
+    send_file,
+    Response
+)
 from models.user_model import Users
+from utilities.methods import get_dataset, get_dataset_name
 from utilities.respond import respond
 from flask_restful import  Api
-from flask import request
 from flask_login import current_user, login_required
 import pandas as pd
 from manage.db_setup import db
@@ -103,6 +108,39 @@ def delete_dataset():
         return respond(error=err)
 
 
+# Api to export a dataset
+@datasetAPI.route("/export-dataset", methods=["POST"])
+@login_required
+def export_dataset():
+    err = None
+    try:
+        user = Users.query.filter_by(id=current_user.id).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+
+        dataset_name = get_dataset_name(user.id, dataset_name, db)
+        df = get_dataset(dataset_name, db)
+
+        df = df.to_csv(index=False)
+
+        return Response(
+            df,
+            mimetype="text/csv",
+            headers={"Content-disposition":
+            "attachment; filename=filename.csv"}
+        )
+
+    except Exception as e:
+        app.logger.error("Error in exporting the dataset. Error=> %s. Exception=> %s", err, str(e))
+        if not err:
+            err = 'Error in exporting the dataset'
+        return respond(error=err)
+
 # Api to fetch all the tables in the database
 @datasetAPI.route("/get-datasets", methods=["GET"])
 @login_required
@@ -125,45 +163,4 @@ def get_datasets():
         app.logger.error("Error in getting the datasets. Error=> %s. Exception=> %s", err, str(e))
         if not err:
             err = 'Error in getting the datasets'
-        return respond(error=err)
-
-
-# Api to fetch all the columns in the table
-@datasetAPI.route("/get-columns", methods=["POST"])
-@login_required
-def get_columns():
-    err = None
-    try:
-        user = Users.query.filter_by(id=current_user.id).first()
-        if not user:
-            err = "No such user exits"
-            raise
-
-        table_name = request.json.get("dataset_name")
-        if not table_name:
-            err = "Dataset name is required that is to be deleted"
-
-        tables = db.engine.table_names()
-        if f'{table_name.split(".")[0]}_{user.id}' not in tables:
-            err = "No such database exists"
-            raise
-        # not the right way to do this. But due to time issue, this is done. Don't use raw query
-        columns_sql_query = text(f'SELECT * FROM "{table_name.split(".")[0]}_{user.id}" LIMIT 1;')
-
-        try:
-            result = db.engine.execute(columns_sql_query)
-        except Exception as e:
-            err = "Some error in getting the columns. Please try again later"
-            raise e
-        
-        columns = [c[0] for c in result.cursor.description]
-        res = {
-            "columns":columns
-        }
-        return respond(data=res)
-
-    except Exception as e:
-        app.logger.error("Error in getting the columns. Error=> %s. Exception=> %s", err, str(e))
-        if not err:
-            err = 'Error in getting the columns'
         return respond(error=err)
