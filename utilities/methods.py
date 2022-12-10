@@ -25,5 +25,5 @@ def get_dataset(dataset_name, db):
         df = pd.DataFrame(dataset)
         return df
     except Exception as e:
-        app.logger.info("Error in fetchiung the dataset %s", dataset_name)
+        app.logger.info("Error in fetching the dataset %s", dataset_name)
         raise e

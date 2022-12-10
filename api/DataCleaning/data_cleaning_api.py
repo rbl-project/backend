@@ -78,16 +78,21 @@ def fill_missing_values():
             raise
         
         df = get_dataset(dataset_name, db)
+        # print(df)
+        # df.drop('index',axis=1)
+        # # df.reset_index(drop=True).drop('index',axis=1)
+        # print(df.columns)
 
         # Custom missing value
         # fill_value = request.json.get("fill_value")
         # if not fill_value:
         #     err = "Fill value is required"
         #     raise
+
         for i in df.columns:
             df[i].fillna(df[i].mode()[0], inplace=True)
             
-        df.to_sql(dataset_name, db.engine)
+        df.to_sql(dataset_name, db.engine, if_exists='append', index=False, method='multi') # THIS GIVES ERROR BECOZ SAME TABLE IS ALREADY PRESENT IN DB AND HERE IS INSERTING SAME TABLE AGAIN
 
         return respond(data={"message": "Missing values filled successfully"}, code=200)
     

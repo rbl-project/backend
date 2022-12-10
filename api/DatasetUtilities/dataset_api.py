@@ -46,12 +46,12 @@ def upload_dataset():
         df = pd.read_csv(dataset)
         df.columns = [c.lower() for c in df.columns] # PostgreSQL doesn't like capitals or spaces
 
-        df.to_sql(dataset_name, db.engine) # This will re insert the table
+        df.to_sql(dataset_name, db.engine, index=False, method='multi') # This will insert the table
         
         user.db_count = user.db_count + 1
         user.save()
 
-        app.logger.info("Dataset uploaded successfully %s",str(dataset.filename))
+        app.logger.info("Dataset '%s' uploaded successfully",str(dataset.filename))
 
         res = {
             "msg":"Dataset Uploaded Successfully"
