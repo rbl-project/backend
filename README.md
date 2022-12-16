@@ -15,6 +15,13 @@ To make sure WSL is running, run `wsl -l -v` in Poswershell. It must say that no
 4. To run the project locally run `gunicorn --reload --bind 127.0.0.1:8000 app:app`. ( Bedfore this the DB setup must be done. Follow below)
 
 ### First Time Local Database Setup
+0. Install Redis In Your Linux System
+```
+sudo apt update
+
+sudo apt-get install -y redis-server
+
+```
 1. Install the postgresql in your system. 
 ```
 # updates
@@ -110,3 +117,10 @@ Run `sudo -u postgres psql`. This will open the psql command line
 If at all any error happens while upgrading the database on heroku using `heroku run flask db upgrade` then we having conflicting version in alembic_table and migrations folders.
 
 In this case kidly drop the table alembic_version and run `heroku run flask db upgrade` again to make the table with latest schema.
+
+
+### Final Run After Project Setup
+1. Start redis server by running `sudo service redis-server start`
+2. Start postgres database by running `sudo service postgresql restart`
+3. Start celery worker by running `celery -A app.celery_instance worker --loglevel=info`
+4. Start the gunicorn using `gunicorn --reload --bind 127.0.0.1 app:app --timeout 999999999`

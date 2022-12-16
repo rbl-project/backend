@@ -21,6 +21,7 @@ from manage.db_setup import db
 from sqlalchemy import text
 from utilities.constants import ALLOWED_DB_PER_USER
 from pathlib import Path
+from manage.celery_setup import celery_instance
 
 datasetAPI = Blueprint("datasetAPI", __name__)
 datasetAPI_restful = Api(datasetAPI)
@@ -205,8 +206,12 @@ def get_datasets():
         all_datesets = os.listdir(user_directory)
 
         res = {
-            "tables":all_datesets
+            "email": user.email,
+            "datasets":all_datesets
         }
+        
+        keep_alive.delay()
+
         return respond(data=res)
 
     except Exception as e:
@@ -218,3 +223,11 @@ def get_datasets():
         # If directory is empty, delete the directory
         if not os.listdir(user_directory):
             os.rmdir(user_directory)
+
+# Api to test redis functionality
+@celery_instance.task
+def keep_alive():
+    import time
+    for i in range(5):
+        time.sleep(1)
+        print("Celery task running")
