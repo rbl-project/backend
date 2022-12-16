@@ -55,7 +55,7 @@ def upload_dataset():
         # Check if the dataset already exists
         dataset_file = get_parquet_dataset_file_name(dataset_name, user.email)
         if Path(dataset_file).is_file():
-            err = "This database already exists"
+            err = "This dataset already exists"
             raise
         
         # Read the csv and convert it into parquet
