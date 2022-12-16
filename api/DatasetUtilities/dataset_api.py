@@ -1,3 +1,4 @@
+import os
 from flask import (
     Blueprint,
     request,
@@ -6,7 +7,12 @@ from flask import (
     Response
 )
 from models.user_model import Users
-from utilities.methods import get_dataset, get_dataset_name
+from utilities.methods import ( 
+    get_dataset, 
+    get_dataset_name, 
+    get_parquet_dataset_file_name, 
+    get_user_directory
+)
 from utilities.respond import respond
 from flask_restful import  Api
 from flask_login import current_user, login_required
@@ -14,6 +20,7 @@ import pandas as pd
 from manage.db_setup import db
 from sqlalchemy import text
 from utilities.constants import ALLOWED_DB_PER_USER
+from pathlib import Path
 
 datasetAPI = Blueprint("datasetAPI", __name__)
 datasetAPI_restful = Api(datasetAPI)
@@ -38,16 +45,23 @@ def upload_dataset():
             err = "Dataset file is required"
             raise
 
-        dataset_name = f'{dataset.filename.split(".")[0]}_{user.id}'
-        if dataset_name in db.engine.table_names():
+        # dataset_name = f'{dataset.filename.split(".")[0]}_{user.id}'
+        dataset_name = get_dataset_name(user.id, dataset.filename)
+
+        # Check if you have the directory for the user
+        directory = get_user_directory(user.email)
+        Path(directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
+        
+        # Check if the dataset already exists
+        dataset_file = get_parquet_dataset_file_name(dataset_name, user.email)
+        if Path(dataset_file).is_file():
             err = "This database already exists"
             raise
-
-        df = pd.read_csv(dataset)
-        df.columns = [c.lower() for c in df.columns] # PostgreSQL doesn't like capitals or spaces
-
-        df.to_sql(dataset_name, db.engine, index=False, method='multi') # This will insert the table
         
+        # Read the csv and convert it into parquet
+        df = pd.read_csv(dataset)
+        df.to_parquet(dataset_file, compression="snappy", index=False)
+
         user.db_count = user.db_count + 1
         user.save()
 
@@ -80,19 +94,38 @@ def delete_dataset():
         if not dataset_name:
             err = "Dataset name is required that is to be deleted"
 
-        tables = db.engine.table_names()
-        if f'{dataset_name.split(".")[0]}_{user.id}' not in tables:
-            err = "No such database exists"
-            raise
-        # not the right way to do this. But due to time issue, this is done. Don't use raw query
-        delete_sql_query = text(f'DROP TABLE "{dataset_name.split(".")[0]}_{user.id}";')
+        # dataset_name = f'{dataset_name.split(".")[0]}_{user.id}'
+        dataset_name = get_dataset_name(user.id, dataset_name)
 
-        try:
-            result = db.engine.execute(delete_sql_query)
-        except Exception as e:
-            err = "Some error in deleting the dataset. Please try again later"
-            raise e
+
+        # Check if you have the directory for the user
+        directory = get_user_directory(user.email)
+        Path(directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
+
+        # Check if the dataset already exists
+        dataset_file = get_parquet_dataset_file_name(dataset_name, user.email)
+        if not Path(dataset_file).is_file():
+            err = "This dataset does not exists"
+            raise
         
+        # Delete the dataset
+        Path(dataset_file).unlink()
+
+        # =============== Older Approach ===============
+        # tables = db.engine.table_names()
+        # if f'{dataset_name.split(".")[0]}_{user.id}' not in tables:
+        #     err = "No such database exists"
+        #     raise
+        # # not the right way to do this. But due to time issue, this is done. Don't use raw query
+        # delete_sql_query = text(f'DROP TABLE "{dataset_name.split(".")[0]}_{user.id}";')
+
+        # try:
+        #     result = db.engine.execute(delete_sql_query)
+        # except Exception as e:
+        #     err = "Some error in deleting the dataset. Please try again later"
+        #     raise e
+        # ===============================================
+
         user.db_count = user.db_count - 1
         user.save()
 
@@ -106,6 +139,10 @@ def delete_dataset():
         if not err:
             err = 'Error in deleting the dataset'
         return respond(error=err)
+    finally:
+        # If directory is empty, delete the directory
+        if not os.listdir(directory):
+            os.rmdir(directory)
 
 
 # Api to export a dataset
@@ -123,9 +160,14 @@ def export_dataset():
         if not dataset_name:
             err = "Dataset name is required"
 
-        dataset_name = get_dataset_name(user.id, dataset_name, db)
-        df = get_dataset(dataset_name, db)
+        dataset_name = get_dataset_name(user.id, dataset_name)
+        dataset_file = get_parquet_dataset_file_name(dataset_name, user.email)
 
+        if not Path(dataset_file).is_file():
+            err = "This dataset does not exists"
+            raise
+
+        df = pd.read_parquet(dataset_file)
         df = df.to_csv(index=False)
 
         return Response(
@@ -151,11 +193,19 @@ def get_datasets():
         if not user:
             err = "No such user exits"
             raise
+        
+        # =============== Older Approach ===============
+        # tables = db.engine.table_names()
+        # tables = [t for t in tables if t.endswith(f'_{user.id}')]
+        # ===============================================
 
-        tables = db.engine.table_names()
-        tables = [t for t in tables if t.endswith(f'_{user.id}')]
+        user_directory = get_user_directory(user.email)
+        Path(user_directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
+
+        all_datesets = os.listdir(user_directory)
+
         res = {
-            "tables":tables
+            "tables":all_datesets
         }
         return respond(data=res)
 
@@ -164,3 +214,7 @@ def get_datasets():
         if not err:
             err = 'Error in getting the datasets'
         return respond(error=err)
+    finally:
+        # If directory is empty, delete the directory
+        if not os.listdir(user_directory):
+            os.rmdir(user_directory)

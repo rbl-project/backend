@@ -9,6 +9,7 @@ from flask_login import LoginManager, current_user
 from dotenv import load_dotenv
 import os
 from models.user_model import Users
+from utilities.methods import get_home_directory
 from utilities.respond import respond
 # APIs
 from api.DataVisulization import data_visualization_api
@@ -100,6 +101,8 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=3)
+    app.config["UPLOAD_FOLDER"] = f"{os.getcwd()}/assets/user_datasets"
+    app.config['MAX_CONTENT_LENGTH'] = 100 * 1000 * 1000 # 100 MB
 
     db.init_app(app)
     migrate.init_app(app, db)

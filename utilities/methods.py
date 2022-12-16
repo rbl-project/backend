@@ -4,6 +4,7 @@ import re
 from sqlalchemy import text
 import pandas as pd
 from flask import current_app as app
+from pathlib import Path
 
 def is_email_valid(email):
     regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
@@ -12,10 +13,8 @@ def is_email_valid(email):
     else:
         return False
 
-def get_dataset_name(user_id, dataset_name, db):
+def get_dataset_name(user_id, dataset_name):
     dataset_name = f'{dataset_name.split(".")[0]}_{user_id}'
-    if not dataset_name in db.engine.table_names():
-        return None
     return dataset_name
 
 def get_dataset(dataset_name, db):
@@ -27,3 +26,15 @@ def get_dataset(dataset_name, db):
     except Exception as e:
         app.logger.info("Error in fetching the dataset %s", dataset_name)
         raise e
+
+def get_parquet_dataset_file_name(dataset_name, user_email):
+    dataset_file = app.config['UPLOAD_FOLDER'] + f'/{user_email}/{dataset_name}.parquet'
+    return dataset_file
+
+def get_home_directory():
+    home_directory = Path.home()
+    return home_directory
+
+def get_user_directory(user_email):
+    user_directory = app.config['UPLOAD_FOLDER'] + f'/{user_email}'
+    return user_directory
