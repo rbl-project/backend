@@ -18,3 +18,4 @@ vuln-list/
 .bashrc
 .env
 migrations/
+*.parquet
