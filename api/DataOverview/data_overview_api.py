@@ -39,14 +39,6 @@ def get_dataset_overview():
 
         df = load_dataset(dataset_name, user.id, user.email)
 
-        # ========= Old Approach Starts =========
-        # dataset_name = get_dataset_name(user.id, dataset_name, db)
-        # if not dataset_name:
-        #     err = f"Dataset not found"
-        #     raise
-        # df = get_dataset(dataset_name, db)
-        # ========= Old Approach Ends =========
-
         head = df.head().to_dict(orient="records") # to send each row as a dictionary
 
         tail = df.tail().to_dict(orient="records")
@@ -96,12 +88,6 @@ def get_columns():
             err = "Dataset name is required"
 
         df = load_dataset(dataset_name, user.id, user.email)
-        # dataset_name = get_dataset_name(user.id, dataset_name, db)
-        # if not dataset_name:
-        #     err = f"Dataset not found"
-        #     raise
-
-        # df = get_dataset(dataset_name, db)
         
         columns = df.columns.to_list()
         res = {

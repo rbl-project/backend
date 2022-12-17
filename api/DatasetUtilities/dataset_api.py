@@ -112,21 +112,6 @@ def delete_dataset():
         # Delete the dataset
         Path(dataset_file).unlink()
 
-        # =============== Older Approach ===============
-        # tables = db.engine.table_names()
-        # if f'{dataset_name.split(".")[0]}_{user.id}' not in tables:
-        #     err = "No such database exists"
-        #     raise
-        # # not the right way to do this. But due to time issue, this is done. Don't use raw query
-        # delete_sql_query = text(f'DROP TABLE "{dataset_name.split(".")[0]}_{user.id}";')
-
-        # try:
-        #     result = db.engine.execute(delete_sql_query)
-        # except Exception as e:
-        #     err = "Some error in deleting the dataset. Please try again later"
-        #     raise e
-        # ===============================================
-
         user.db_count = user.db_count - 1
         user.save()
 
@@ -195,11 +180,6 @@ def get_datasets():
             err = "No such user exits"
             raise
         
-        # =============== Older Approach ===============
-        # tables = db.engine.table_names()
-        # tables = [t for t in tables if t.endswith(f'_{user.id}')]
-        # ===============================================
-
         user_directory = get_user_directory(user.email)
         Path(user_directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
 
