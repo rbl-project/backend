@@ -10,11 +10,14 @@ from dotenv import load_dotenv
 import os
 from models.user_model import Users
 from utilities.respond import respond
+from manage.celery_setup import celery_instance
+
 # APIs
 from api.DataVisulization import data_visualization_api
 from api.User import user_api
-from api.Dataset import dataset_api
+from api.DatasetUtilities import dataset_api
 from api.DataOverview import data_overview_api
+from api.DataCleaning import data_cleaning_api
 
 load_dotenv()
 
@@ -73,6 +76,12 @@ def set_logger():
 
     logging.setLogRecordFactory(record_factory)
 
+def set_celery(app):
+    '''
+    Function to setup the celery
+    '''
+    celery_instance.conf.update(app.config)
+
 def add_end_points(app):
     '''
     Function to register the api end points
@@ -81,6 +90,7 @@ def add_end_points(app):
     app.register_blueprint(dataset_api.datasetAPI, url_prefix = "/api")
     app.register_blueprint(data_visualization_api.dataVisulizationAPI, url_prefix = "/api")
     app.register_blueprint(data_overview_api.dataOverviewAPI, url_prefix = "/api")
+    app.register_blueprint(data_cleaning_api.dataCleaningAPI, url_prefix = "/api")
 
 def create_app():
     '''
@@ -95,9 +105,12 @@ def create_app():
     elif os.getenv("ENVIRONMENT") == "production":
         app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("POSTGRESS_DATABASE_URL")
 
+    app.config["CELERY_BROKER_URL"] = "redis://localhost:6379"
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=3)
+    app.config["UPLOAD_FOLDER"] = f"{os.getcwd()}/assets/user_datasets"
+    app.config['MAX_CONTENT_LENGTH'] = 100 * 1000 * 1000 # 100 MB
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -109,6 +122,7 @@ def create_app():
     set_login_manager(app)
     add_end_points(app)
     set_logger()
+    set_celery(app)
 
     return app
 

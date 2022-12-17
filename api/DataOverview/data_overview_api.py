@@ -5,17 +5,13 @@ from flask import (
     current_app as app
 )
 from utilities.methods import (
-    get_dataset,
-    get_dataset_name
+    load_dataset
 )
 from utilities.respond import respond
 from flask_login import current_user, login_required
 from flask_restful import Api
 from models.user_model import Users
-from manage.db_setup import db
-import pandas as pd
 
-from sqlalchemy import text
 
 dataOverviewAPI = Blueprint("dataOverviewAPI", __name__)
 dataOverviewAPI_restful = Api(dataOverviewAPI)
@@ -36,11 +32,9 @@ def get_dataset_overview():
         if not dataset_name:
             err = "Dataset name is required"
 
-        dataset_name = get_dataset_name(user.id, dataset_name, db)
-        if not dataset_name:
-            err = f"Dataset not found"
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
             raise
-        df = get_dataset(dataset_name, db)
 
         head = df.head().to_dict(orient="records") # to send each row as a dictionary
 
@@ -89,13 +83,10 @@ def get_columns():
         dataset_name = request.json.get("dataset_name")
         if not dataset_name:
             err = "Dataset name is required"
-
-        dataset_name = get_dataset_name(user.id, dataset_name, db)
-        if not dataset_name:
-            err = f"Dataset not found"
-            raise
-
-        df = get_dataset(dataset_name, db)
+        
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
+            raise 
         
         columns = df.columns.to_list()
         res = {

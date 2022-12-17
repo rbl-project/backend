@@ -8,12 +8,11 @@ from models.user_model import Users
 from api.DataVisulization.utilities import getImage
 from utilities.respond import respond
 from utilities.methods import (
-    get_dataset,
-    get_dataset_name
+    load_dataset,
+    save_dataset
 )
 from flask_restful import  Api
 from flask_login import current_user, login_required
-from manage.db_setup import db
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -36,12 +35,10 @@ def data_describe():
             err = "Dataset name is required"
             raise
         
-        dataset_name = get_dataset_name(user.id, dataset_name, db)
-        if not dataset_name:
-            err = f"Dataset not found"
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
             raise
-        df = get_dataset(dataset_name, db)
-
+        
         describe_data = df.describe()
 
         describe_data = describe_data.to_dict()
@@ -75,13 +72,11 @@ def two_var_correlation():
             err = "Dataset name is required"
             raise
         
-        plot_type = request.json.get("plot_type", None)
+        plot_type = request.json.get("plot_type", "scatter")
 
-        dataset_name = get_dataset_name(user.id, dataset_name, db)
-        if not dataset_name:
-            err = f"Dataset not found"
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
             raise
-        df = get_dataset(dataset_name, db)
 
         col1 = request.json.get("col1")
         col2 = request.json.get("col2")
@@ -136,11 +131,9 @@ def all_var_correlation():
             err = "Dataset name is required"
             raise
         
-        dataset_name = get_dataset_name(user.id, dataset_name, db)
-        if not dataset_name:
-            err = f"Dataset not found"
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
             raise
-        df = get_dataset(dataset_name, db)
         
         corr = df.corr()
 
@@ -181,11 +174,9 @@ def pie_chart_col():
             err = "Dataset name is required"
             raise
         
-        dataset_name = get_dataset_name(user.id, dataset_name, db)
-        if not dataset_name:
-            err = f"Dataset not found"
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
             raise
-        df = get_dataset(dataset_name, db)
         
         col = request.json.get("col")
         if not col:
