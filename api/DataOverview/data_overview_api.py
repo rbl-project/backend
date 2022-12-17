@@ -6,7 +6,8 @@ from flask import (
 )
 from utilities.methods import (
     get_dataset,
-    get_dataset_name
+    get_dataset_name,
+    load_dataset
 )
 from utilities.respond import respond
 from flask_login import current_user, login_required
@@ -36,11 +37,15 @@ def get_dataset_overview():
         if not dataset_name:
             err = "Dataset name is required"
 
-        dataset_name = get_dataset_name(user.id, dataset_name, db)
-        if not dataset_name:
-            err = f"Dataset not found"
-            raise
-        df = get_dataset(dataset_name, db)
+        df = load_dataset(dataset_name, user.id, user.email)
+
+        # ========= Old Approach Starts =========
+        # dataset_name = get_dataset_name(user.id, dataset_name, db)
+        # if not dataset_name:
+        #     err = f"Dataset not found"
+        #     raise
+        # df = get_dataset(dataset_name, db)
+        # ========= Old Approach Ends =========
 
         head = df.head().to_dict(orient="records") # to send each row as a dictionary
 
@@ -90,12 +95,13 @@ def get_columns():
         if not dataset_name:
             err = "Dataset name is required"
 
-        dataset_name = get_dataset_name(user.id, dataset_name, db)
-        if not dataset_name:
-            err = f"Dataset not found"
-            raise
+        df = load_dataset(dataset_name, user.id, user.email)
+        # dataset_name = get_dataset_name(user.id, dataset_name, db)
+        # if not dataset_name:
+        #     err = f"Dataset not found"
+        #     raise
 
-        df = get_dataset(dataset_name, db)
+        # df = get_dataset(dataset_name, db)
         
         columns = df.columns.to_list()
         res = {

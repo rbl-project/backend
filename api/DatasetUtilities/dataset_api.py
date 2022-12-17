@@ -209,8 +209,6 @@ def get_datasets():
             "email": user.email,
             "datasets":all_datesets
         }
-        
-        keep_alive.delay()
 
         return respond(data=res)
 

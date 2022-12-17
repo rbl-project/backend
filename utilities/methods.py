@@ -38,3 +38,15 @@ def get_home_directory():
 def get_user_directory(user_email):
     user_directory = app.config['UPLOAD_FOLDER'] + f'/{user_email}'
     return user_directory
+
+def load_dataset(dataset_name, user_id, user_email):
+    dataset_name = get_dataset_name(user_id, dataset_name)
+    dataset_file = get_parquet_dataset_file_name(dataset_name, user_email)
+    if not Path(dataset_file).is_file():
+        err = "This dataset does not exists"
+        raise err
+    df = pd.read_parquet(dataset_file)
+    return df
+
+def save_dataset():
+    pass
