@@ -37,7 +37,9 @@ def get_dataset_overview():
         if not dataset_name:
             err = "Dataset name is required"
 
-        df = load_dataset(dataset_name, user.id, user.email)
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
+            raise
 
         head = df.head().to_dict(orient="records") # to send each row as a dictionary
 
@@ -86,8 +88,10 @@ def get_columns():
         dataset_name = request.json.get("dataset_name")
         if not dataset_name:
             err = "Dataset name is required"
-
-        df = load_dataset(dataset_name, user.id, user.email)
+        
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
+            raise 
         
         columns = df.columns.to_list()
         res = {

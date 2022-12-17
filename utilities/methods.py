@@ -42,11 +42,13 @@ def get_user_directory(user_email):
 def load_dataset(dataset_name, user_id, user_email):
     dataset_name = get_dataset_name(user_id, dataset_name)
     dataset_file = get_parquet_dataset_file_name(dataset_name, user_email)
+    
     if not Path(dataset_file).is_file():
         err = "This dataset does not exists"
-        raise err
+        return None, err
+
     df = pd.read_parquet(dataset_file)
-    return df
+    return df, None
 
 def save_dataset():
     pass
