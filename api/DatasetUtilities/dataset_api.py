@@ -3,12 +3,10 @@ from flask import (
     Blueprint,
     request,
     current_app as app,
-    send_file,
     Response
 )
 from models.user_model import Users
 from utilities.methods import ( 
-    get_dataset, 
     get_dataset_name, 
     get_parquet_dataset_file_name, 
     get_user_directory
@@ -17,8 +15,6 @@ from utilities.respond import respond
 from flask_restful import  Api
 from flask_login import current_user, login_required
 import pandas as pd
-from manage.db_setup import db
-from sqlalchemy import text
 from utilities.constants import ALLOWED_DB_PER_USER
 from pathlib import Path
 from manage.celery_setup import celery_instance

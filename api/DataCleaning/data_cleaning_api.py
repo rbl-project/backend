@@ -1,14 +1,16 @@
 from flask import (
     Blueprint,
     request,
-    current_app as app,
-    Response
+    current_app as app
 )
 from flask_restful import Api
 from flask_login import login_required, current_user
 from models.user_model import Users
-from manage.db_setup import db
-from utilities.methods import get_dataset, get_dataset_name
+from utilities.constants import DEFAULT_FILL_METHOD
+from utilities.methods import (
+    load_dataset, 
+    save_dataset
+)
 from utilities.respond import respond
 
 dataCleaningAPI = Blueprint('dataCleaningAPI', __name__)
@@ -30,12 +32,9 @@ def check_missing_values():
             err = "Dataset name is required"
             raise
 
-        dataset_name = get_dataset_name(user.id, dataset_name, db)
-        if not dataset_name:
-            err = f"Dataset not found"
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
             raise
-        
-        df = get_dataset(dataset_name, db)
 
         total_rows_with_missing_values = df.isnull().any(axis = 1).sum()
         col_with_count_of_missing_values = df.isnull().sum(axis = 0).to_dict()
@@ -71,29 +70,25 @@ def fill_missing_values():
         if not dataset_name:
             err = "Dataset name is required"
             raise
-
-        dataset_name = get_dataset_name(user.id, dataset_name, db)
-        if not dataset_name:
-            err = f"Dataset not found"
-            raise
         
-        df = get_dataset(dataset_name, db)
-        # print(df)
-        # df.drop('index',axis=1)
-        # # df.reset_index(drop=True).drop('index',axis=1)
-        # print(df.columns)
+        method = request.json.get("method") if request.json.get("method") else DEFAULT_FILL_METHOD
 
-        # Custom missing value
-        # fill_value = request.json.get("fill_value")
-        # if not fill_value:
-        #     err = "Fill value is required"
-        #     raise
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
+            raise
 
-        for i in df.columns:
-            df[i].fillna(df[i].mode()[0], inplace=True)
-            
-        df.to_sql(dataset_name, db.engine, if_exists='append', index=False, method='multi') # THIS GIVES ERROR BECOZ SAME TABLE IS ALREADY PRESENT IN DB AND HERE IS INSERTING SAME TABLE AGAIN
-
+        if method == "mode":
+            for i in df.columns:
+                df[i].fillna(df[i].mode()[0], inplace=True)
+        elif method == "mean":
+            for i in df.columns:
+                df[i].fillna(df[i].mean(), inplace=True)
+        elif method == "median":
+            for i in df.columns:
+                df[i].fillna(df[i].median(), inplace=True)
+        
+        save_dataset(df, dataset_name, user.id, user.email)
+        
         return respond(data={"message": "Missing values filled successfully"}, code=200)
     
     except Exception as e:

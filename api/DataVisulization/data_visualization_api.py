@@ -8,14 +8,11 @@ from models.user_model import Users
 from api.DataVisulization.utilities import getImage
 from utilities.respond import respond
 from utilities.methods import (
-    get_dataset,
-    get_dataset_name,
     load_dataset,
     save_dataset
 )
 from flask_restful import  Api
 from flask_login import current_user, login_required
-from manage.db_setup import db
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np

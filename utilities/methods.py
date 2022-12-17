@@ -17,16 +17,6 @@ def get_dataset_name(user_id, dataset_name):
     dataset_name = f'{dataset_name.split(".")[0]}_{user_id}'
     return dataset_name
 
-def get_dataset(dataset_name, db):
-    try:
-        sql_query = text(f'select * from "{dataset_name}"')
-        dataset = db.engine.execute(sql_query)
-        df = pd.DataFrame(dataset)
-        return df
-    except Exception as e:
-        app.logger.info("Error in fetching the dataset %s", dataset_name)
-        raise e
-
 def get_parquet_dataset_file_name(dataset_name, user_email):
     dataset_file = app.config['UPLOAD_FOLDER'] + f'/{user_email}/{dataset_name}.parquet'
     return dataset_file
@@ -40,15 +30,41 @@ def get_user_directory(user_email):
     return user_directory
 
 def load_dataset(dataset_name, user_id, user_email):
-    dataset_name = get_dataset_name(user_id, dataset_name)
-    dataset_file = get_parquet_dataset_file_name(dataset_name, user_email)
-    
-    if not Path(dataset_file).is_file():
-        err = "This dataset does not exists"
-        return None, err
+    try:
+        dataset_name = get_dataset_name(user_id, dataset_name)
+        dataset_file = get_parquet_dataset_file_name(dataset_name, user_email)
+        
+        if not Path(dataset_file).is_file():
+            err = "This dataset does not exists"
+            return None, err
 
-    df = pd.read_parquet(dataset_file)
-    return df, None
+        df = pd.read_parquet(dataset_file)
+        return df, None
 
-def save_dataset():
-    pass
+    except Exception as e:
+        app.logger.error("Error in loading the dataset")
+        raise Exception(e)
+
+def save_dataset(df, dataset_name, user_id, user_email):
+    try:
+        dataset_name = get_dataset_name(user_id, dataset_name)
+        dataset_file = get_parquet_dataset_file_name(dataset_name, user_email)
+        df.to_parquet(dataset_file, compression="snappy", index=False)
+        return None
+    except Exception as e:
+        app.logger.error("Error in saving the dataset")
+        raise Exception(e)
+
+
+
+
+# =========================OLDER UNNECESSARY CODE=========================
+def get_dataset(dataset_name, db):
+    try:
+        sql_query = text(f'select * from "{dataset_name}"')
+        dataset = db.engine.execute(sql_query)
+        df = pd.DataFrame(dataset)
+        return df
+    except Exception as e:
+        app.logger.info("Error in fetching the dataset %s", dataset_name)
+        raise e
