@@ -3,14 +3,19 @@ from flask import Flask
 from flask_cors import CORS
 import logging
 from logging.config import dictConfig
-from manage.db_setup import db
-from manage.db_setup import migrate
-from flask_login import LoginManager, current_user
 from dotenv import load_dotenv
 import os
-from models.user_model import Users
 from utilities.respond import respond
+
+# Models
+from models.user_model import Users
+from models.jwt_blocklist_model import TokenBlocklist
+
+# Extensions
+from manage.db_setup import db
+from manage.db_setup import migrate
 from manage.celery_setup import celery_instance
+from manage.jwt_extension import jwt
 
 # APIs
 from api.DataVisulization import data_visualization_api
@@ -21,24 +26,12 @@ from api.DataCleaning import data_cleaning_api
 
 load_dotenv()
 
-def set_login_manager(app):
-    '''
-    Function to setup the Authentication and Authorization configuration
-    '''
-    # login manager 
-    login_manager = LoginManager()
-    login_manager.init_app(app)
-
-    @login_manager.user_loader
-    def load_user(user_id):
-        return Users.query.get(int(user_id))
-
-    @login_manager.unauthorized_handler
-    def unauthorized():
-        res = {
-            "msg":"Unauthorized"
-        }
-        return respond(error=res, code=401)
+def set_jwt_token():
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload):
+        jti = jwt_payload["jti"]
+        token = TokenBlocklist.query.filter_by(jti = jti).first()
+        return token is not None
 
 def set_logger():
     '''
@@ -47,7 +40,8 @@ def set_logger():
     dictConfig({
         'version': 1,
         'formatters': {'default': {
-            'format': '[%(asctime)s] [%(levelname)s] in [%(module)s]:[%(user_email)s] %(message)s',
+            'format': '[%(asctime)s] [%(levelname)s] in [%(module)s]: %(message)s',
+            # 'format': '[%(asctime)s] [%(levelname)s] in [%(module)s]:[%(user_email)s] %(message)s',
         }},
         'handlers': {'wsgi': {
             'class': 'logging.StreamHandler',
@@ -60,21 +54,22 @@ def set_logger():
         }
     })
 
-    old_factory = logging.getLogRecordFactory()
+    # =========================   LOGGER CODE FOR USER EMAIL   =========================
+    # old_factory = logging.getLogRecordFactory()
 
-    def record_factory(*args, **kwargs):
-        record = old_factory(*args, **kwargs)
-        if current_user and current_user.is_authenticated:
-            user = Users.query.get(int(current_user.id))
-            if user:
-                record.user_email = user.email
-            else:
-                record.user_email = "No User"
-        else:
-            record.user_email = "No User"
-        return record
+    # def record_factory(*args, **kwargs):
+    #     record = old_factory(*args, **kwargs)
+    #     if current_user and current_user.is_authenticated:
+    #         user = Users.query.get(int(current_user.id))
+    #         if user:
+    #             record.user_email = user.email
+    #         else:
+    #             record.user_email = "No User"
+    #     else:
+    #         record.user_email = "No User"
+    #     return record
 
-    logging.setLogRecordFactory(record_factory)
+    # logging.setLogRecordFactory(record_factory)
 
 def set_celery(app):
     '''
@@ -111,18 +106,22 @@ def create_app():
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=3)
     app.config["UPLOAD_FOLDER"] = f"{os.getcwd()}/assets/user_datasets"
     app.config['MAX_CONTENT_LENGTH'] = 100 * 1000 * 1000 # 100 MB
-
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=2)
+    
+    # Set the extensions
     db.init_app(app)
     migrate.init_app(app, db)
+    jwt.init_app(app)
 
 
     # with app.app_context():
     #     db.create_all()
 
-    set_login_manager(app)
+    set_celery(app)
     add_end_points(app)
     set_logger()
-    set_celery(app)
+    set_jwt_token()
 
     return app
 

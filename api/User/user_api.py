@@ -5,17 +5,26 @@ from utilities.methods import is_email_valid
 from utilities.respond import respond
 from flask_restful import  Api
 from flask import request
-from flask_login import login_user, login_required, logout_user, current_user
+from flask_jwt_extended import (
+    create_access_token,
+    get_jwt_identity,
+    jwt_required
+)
+
+from api.User.utilities import revoke_jwt_token, delete_expired_jwt_tokens
 
 userAPI = Blueprint("userAPI", __name__)
 userAPI_restful = Api(userAPI)
 
 @userAPI.route("/", methods=['GET'])
-@login_required
+@jwt_required()
 def welcome():
-    id = current_user.id
-    user = Users.query.filter_by(id=id).first()
+    # id = current_user.id
+    current_user = get_jwt_identity()
+    user = Users.query.filter_by(id = current_user["id"]).first()
+
     app.logger.info("Welcome %s", user.name)
+
     res = { 
         'msg':f'Hey {user.name}! Wish you the great data science session!'
     }
@@ -25,10 +34,10 @@ def welcome():
 def register():
     err = None
     try:
-        # logout current session is someone is logged in
-        if current_user.is_authenticated:
-            logout()
-            
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+
         email = request.json.get("email")
         if not email:
             err = "Email is required"
@@ -71,15 +80,18 @@ def register():
 
 
 @userAPI.route('/logout', methods=['GET', 'POST'])
-@login_required
+@jwt_required()
 def logout():
     err = None
     try:
-        user = Users.query.filter_by(id=current_user.id).first()
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
         if not user:
             err = "No such user exits"
             raise
-        logout_user()
+        # logout_user()
+        revoke_jwt_token()
+        delete_expired_jwt_tokens()
 
         app.logger.info("%s Have Been Logged Out!  Thanks For Stopping By...",str(user.email))
 
@@ -114,11 +126,15 @@ def login():
             err = "Bad Credentials. Try again"
             raise
 
-        login_user(user)
+        # login_user(user)
+        access_token = create_access_token(identity=user.to_json())
+       
         app.logger.info("Login Successfull")
         
         res = {
-            "msg":'User Logged In successfully'
+            "msg":'User Logged In successfully',
+            "access_token": access_token,
+            "user_details": user.to_json()
         }
         return respond(data=res)
     except Exception as e:

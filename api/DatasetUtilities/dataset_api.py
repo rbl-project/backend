@@ -13,22 +13,23 @@ from utilities.methods import (
 )
 from utilities.respond import respond
 from flask_restful import  Api
-from flask_login import current_user, login_required
 import pandas as pd
 from utilities.constants import ALLOWED_DB_PER_USER
 from pathlib import Path
 from manage.celery_setup import celery_instance
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 datasetAPI = Blueprint("datasetAPI", __name__)
 datasetAPI_restful = Api(datasetAPI)
 
 # Api to upload dataset
 @datasetAPI.route("/upload-dataset", methods=['POST'])
-@login_required
+@jwt_required()
 def upload_dataset():
     err = None
     try:
-        user = Users.query.filter_by(id=current_user.id).first()
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
         if not user:
             err = "No such user exits"
             raise
@@ -78,11 +79,12 @@ def upload_dataset():
 
 # Api to delete a dataset
 @datasetAPI.route("/delete-dataset", methods=["POST"])
-@login_required
+@jwt_required()
 def delete_dataset():
     err = None
     try:
-        user = Users.query.filter_by(id=current_user.id).first()
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
         if not user:
             err = "No such user exits"
             raise
@@ -129,11 +131,12 @@ def delete_dataset():
 
 # Api to export a dataset
 @datasetAPI.route("/export-dataset", methods=["POST"])
-@login_required
+@jwt_required()
 def export_dataset():
     err = None
     try:
-        user = Users.query.filter_by(id=current_user.id).first()
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
         if not user:
             err = "No such user exits"
             raise
@@ -167,11 +170,12 @@ def export_dataset():
 
 # Api to fetch all the tables in the database
 @datasetAPI.route("/get-datasets", methods=["GET"])
-@login_required
+@jwt_required()
 def get_datasets():
     err = None
     try:
-        user = Users.query.filter_by(id=current_user.id).first()
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
         if not user:
             err = "No such user exits"
             raise
