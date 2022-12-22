@@ -20,7 +20,7 @@ def revoke_jwt_token():
 
 def delete_expired_jwt_tokens():
     try:
-        all_revoked_token = TokenBlocklist.objects()
+        all_revoked_token = TokenBlocklist.query.all()
         for token in all_revoked_token:
             expiry = token.expiry
             if expiry <= datetime.datetime.now():

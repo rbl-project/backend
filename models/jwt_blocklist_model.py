@@ -14,3 +14,11 @@ class TokenBlocklist(db.Model):
         except:
             db.session.rollback()
             raise
+    
+    def delete(self):
+        db.session.delete(self)
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
+            raise
