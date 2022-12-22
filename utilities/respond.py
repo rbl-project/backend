@@ -2,15 +2,16 @@ from flask import jsonify
 
 def respond(data=None, error=None, code=200):
     if error:
-        success = False
+        status = False
         data = None
-        if code == 200:
-            code = 500
+        # if code == 200:
+        #     code = 500
     else:
-        success = True
+        status = True
     res = {
         "data": data,
         "error": error,
-        "success": success
+        "status": status
     }
+    # return jsonify(res) # removed code due to error handeling in frontend
     return jsonify(res), code
