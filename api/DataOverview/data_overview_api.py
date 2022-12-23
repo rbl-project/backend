@@ -8,9 +8,9 @@ from utilities.methods import (
     load_dataset
 )
 from utilities.respond import respond
-from flask_login import current_user, login_required
 from flask_restful import Api
 from models.user_model import Users
+from flask_jwt_extended import get_jwt_identity, jwt_required
 
 
 dataOverviewAPI = Blueprint("dataOverviewAPI", __name__)
@@ -18,11 +18,12 @@ dataOverviewAPI_restful = Api(dataOverviewAPI)
 
 # Api to get the head of dataset
 @dataOverviewAPI.route('/get-dataset-overview', methods=['POST'])
-@login_required
+@jwt_required()
 def get_dataset_overview():
     err = None
     try:
-        user = Users.query.filter_by(id=current_user.id).first()
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
         if not user:
             err = "No such user exits"
             raise
@@ -71,11 +72,12 @@ def get_dataset_overview():
 # Api to get the columns of dataset
 # Api to fetch all the columns in the table
 @dataOverviewAPI.route("/get-columns", methods=["POST"])
-@login_required
+@jwt_required()
 def get_columns():
     err = None
     try:
-        user = Users.query.filter_by(id=current_user.id).first()
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
         if not user:
             err = "No such user exits"
             raise

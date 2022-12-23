@@ -8,24 +8,24 @@ from models.user_model import Users
 from api.DataVisulization.utilities import getImage
 from utilities.respond import respond
 from utilities.methods import (
-    load_dataset,
-    save_dataset
+    load_dataset
 )
 from flask_restful import  Api
-from flask_login import current_user, login_required
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from flask_jwt_extended import get_jwt_identity, jwt_required
 
 dataVisulizationAPI = Blueprint("dataVisulizationAPI", __name__)
 dataVisulizationAPI_restful = Api(dataVisulizationAPI)
 
 @dataVisulizationAPI.route("/data-describe", methods=['POST'])
-@login_required
+@jwt_required()
 def data_describe():
     err = None
     try:
-        user = Users.query.filter_by(id=current_user.id).first()
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
         if not user:
             err = "No such user exits"
             raise
@@ -58,11 +58,12 @@ def data_describe():
 
 # API to show the correlation between two columns 
 @dataVisulizationAPI.route("/two-var-correlation", methods=['POST'])
-@login_required 
+@jwt_required() 
 def two_var_correlation():
     err = None
     try:
-        user = Users.query.filter_by(id=current_user.id).first()
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
         if not user:
             err = "No such user exits"
             raise
@@ -117,11 +118,12 @@ def two_var_correlation():
 
 # Api to show correlation between all columns
 @dataVisulizationAPI.route("/all-var-correlation", methods=['POST'])
-@login_required
+@jwt_required()
 def all_var_correlation():
     err = None
     try:
-        user = Users.query.filter_by(id=current_user.id).first()
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
         if not user:
             err = "No such user exits"
             raise
@@ -160,11 +162,12 @@ def all_var_correlation():
 
 # Api to plot Pie Chart for any columns data
 @dataVisulizationAPI.route("/pie-chart-col", methods=['POST'])
-@login_required
+@jwt_required()
 def pie_chart_col():
     err = None
     try:
-        user = Users.query.filter_by(id=current_user.id).first()
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
         if not user:
             err = "No such user exits"
             raise

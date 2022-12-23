@@ -2,9 +2,8 @@ from email.policy import default
 from manage.db_setup import db
 import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin
 
-class Users(db.Model, UserMixin):
+class Users(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     email = db.Column(db.String(120), nullable=False, unique=True)
@@ -28,6 +27,7 @@ class Users(db.Model, UserMixin):
     
     def to_json(self):
         return {
+            "id": self.id,
             "name": self.name,
             "email": self.email,
             "db_count": self.db_count,

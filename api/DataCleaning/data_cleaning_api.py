@@ -4,7 +4,6 @@ from flask import (
     current_app as app
 )
 from flask_restful import Api
-from flask_login import login_required, current_user
 from models.user_model import Users
 from utilities.constants import DEFAULT_FILL_METHOD
 from utilities.methods import (
@@ -12,17 +11,19 @@ from utilities.methods import (
     save_dataset
 )
 from utilities.respond import respond
+from flask_jwt_extended import get_jwt_identity, jwt_required
 
 dataCleaningAPI = Blueprint('dataCleaningAPI', __name__)
 dataCleaningAPI_restful = Api(dataCleaningAPI)
 
 # Api to get the missing values in dataset
 @dataCleaningAPI.route('/check-missing-values', methods=['POST'])
-@login_required
+@jwt_required()
 def check_missing_values():
     err = None
     try:
-        user = Users.query.filter_by(id=current_user.id).first()
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
         if not user:
             err = "No such user exits"
             raise
@@ -57,11 +58,12 @@ def check_missing_values():
 
 # Api to fill the missing values in dataset [ CURRENTLY FOR TESTING PURPOSE ONLY MODE VALUE IS ADDED FOR EACH COLUMN ]
 @dataCleaningAPI.route('/fill-missing-values', methods=['POST'])
-@login_required
+@jwt_required()
 def fill_missing_values():
     err = None
     try:
-        user = Users.query.filter_by(id=current_user.id).first()
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
         if not user:
             err = "No such user exits"
             raise
