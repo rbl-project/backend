@@ -15,9 +15,13 @@ rbl_backend
     - venv
 ```
 Please ensure that you have same directory structure as above for the project to work properly.
+
 3. Download the `.env` file from resources repository or ask the owner ( prashantdwivedi194@gmail.com ) for environment variables file.
+
 4. Make sure that you have `.env` file availale in `backend` directory.
+
 5. Install the dependencies `pip install -r requirements.txt`
+
 6. Install Redis In Your Linux System using below commands.
 ```
 sudo apt update
