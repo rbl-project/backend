@@ -168,6 +168,54 @@ def export_dataset():
             err = 'Error in exporting the dataset'
         return respond(error=err)
 
+
+# Api to rename a dataset
+@datasetAPI.route("/rename-dataset", methods=["POST"])
+@jwt_required()
+def rename_dataset():
+    err = None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        new_dataset_name = request.json.get("new_dataset_name")
+        if not new_dataset_name:
+            err = "New dataset name is required"
+            raise
+
+        dataset_name = get_dataset_name(user.id, dataset_name)
+        new_dataset_name = get_dataset_name(user.id, new_dataset_name)
+
+        dataset_file = get_parquet_dataset_file_name(dataset_name, user.email)
+        if not Path(dataset_file).is_file():
+            err = f"The dataset does not exists"
+            raise
+
+        new_dataset_file = get_parquet_dataset_file_name(new_dataset_name, user.email)
+
+        os.rename(dataset_file, new_dataset_file)
+
+        res = {
+            "msg":"Dataset Renamed Successfully"
+        }
+
+        return respond(data=res)
+
+    except Exception as e:
+        app.logger.error("Error in renaming the dataset. Error=> %s. Exception=> %s", err, str(e))
+        if not err:
+            err = 'Error in renaming the dataset'
+        return respond(error=err)
+
+
 # Api to fetch all the tables in the database
 @datasetAPI.route("/get-datasets", methods=["GET"])
 @jwt_required()
@@ -201,6 +249,7 @@ def get_datasets():
         # If directory is empty, delete the directory
         if not os.listdir(user_directory):
             os.rmdir(user_directory)
+
 
 # Api to test redis functionality
 @celery_instance.task
