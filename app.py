@@ -5,7 +5,7 @@ import logging
 from logging.config import dictConfig
 from dotenv import load_dotenv
 import os
-from utilities.respond import respond
+from utilities.constants import ONE_GB
 
 # Models
 from models.user_model import Users
@@ -87,6 +87,17 @@ def add_end_points(app):
     app.register_blueprint(data_overview_api.dataOverviewAPI, url_prefix = "/api")
     app.register_blueprint(data_cleaning_api.dataCleaningAPI, url_prefix = "/api")
 
+def configure_app(app):
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("POSTGRESS_DATABASE_URL")
+    app.config["CELERY_BROKER_URL"] = os.getenv("CELERY_BROKER_URL")
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=3)
+    app.config["UPLOAD_FOLDER"] = f"{os.getcwd()}/assets/user_datasets"
+    app.config['MAX_CONTENT_LENGTH'] = ONE_GB 
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=2)
+
 def create_app():
     '''
     Function to create flask app
@@ -94,26 +105,12 @@ def create_app():
     app = Flask(__name__)
     
     CORS(app)
-    
-    if os.getenv("ENVIRONMENT") == "development":
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("LOCAL_POSTGRES_URL")
-    elif os.getenv("ENVIRONMENT") == "production":
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("POSTGRESS_DATABASE_URL")
+    configure_app(app)
 
-    app.config["CELERY_BROKER_URL"] = "redis://localhost:6379"
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=3)
-    app.config["UPLOAD_FOLDER"] = f"{os.getcwd()}/assets/user_datasets"
-    app.config['MAX_CONTENT_LENGTH'] = 100 * 1000 * 1000 # 100 MB
-    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
-    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=2)
-    
     # Set the extensions
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-
 
     # with app.app_context():
     #     db.create_all()
