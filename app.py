@@ -72,8 +72,7 @@ def set_logger():
     dictConfig({
         'version': 1,
         'formatters': {'default': {
-            # 'format': '[%(asctime)s] [%(levelname)s] in [%(module)s]: %(message)s',
-            'format': '[%(asctime)s] [%(levelname)s] in [%(module)s]:[%(user_email)s] %(message)s',
+            'format': '%(log_color_start)s[%(asctime)s] [%(levelname)s] in [%(module)s]:[%(user_email)s] %(message)s %(log_color_end)s',
         }},
         'handlers': {'wsgi': {
             'class': 'logging.StreamHandler',
@@ -92,8 +91,17 @@ def set_logger():
     # below method need @jwt_required for get_current_user() to work thus we used try catch
     def record_factory(*args, **kwargs):
         record = old_factory(*args, **kwargs)
+        record.log_color_start = ""
+        record.log_color_end = ""
+        record.user_email = "None"
+
         try:
-            record.user_email = "None"
+            # set color for error
+            if record.levelname == "ERROR":
+                record.log_color_start = "\u001b[31m"
+                record.log_color_end = "\u001b[0m"
+            
+            # set user email
             current_user = get_current_user()
             if current_user and current_user.email:
                 if current_user:
@@ -103,6 +111,8 @@ def set_logger():
             else:
                 record.user_email = "None"
         except Exception as e:
+            record.log_color_start = ""
+            record.log_color_end = ""
             record.user_email = "None"
         return record
 
