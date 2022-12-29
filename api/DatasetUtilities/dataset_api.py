@@ -34,7 +34,7 @@ def upload_dataset():
             err = "No such user exits"
             raise
 
-        if user.db_count > ALLOWED_DB_PER_USER:
+        if user.db_count >= ALLOWED_DB_PER_USER:
             err = f"You cannot add more than {ALLOWED_DB_PER_USER} databases. Please delete few databases to add a new one."
             raise
 
