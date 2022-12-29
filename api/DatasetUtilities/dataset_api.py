@@ -231,11 +231,20 @@ def get_datasets():
         user_directory = get_user_directory(user.email)
         Path(user_directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
 
-        all_datesets = os.listdir(user_directory)
+        all_datasets_list = os.listdir(user_directory)
+        all_datasets_dict = []
+        for dataset in all_datasets_list:
+            temp = {
+                "name":dataset.split(".")[0],
+                "size": round(os.path.getsize(os.path.join(user_directory, dataset)) / (1024), 2) # (KB) THIS IS WRONG WE NEED CSV SIZE NOT PARQUET SIZE
+            }
+            all_datasets_dict.append(temp)
+
 
         res = {
             "email": user.email,
-            "datasets":all_datesets
+            "datasets":all_datasets_dict,
+            "db_count":user.db_count
         }
 
         return respond(data=res)
