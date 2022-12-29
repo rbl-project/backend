@@ -6,6 +6,7 @@ from logging.config import dictConfig
 from dotenv import load_dotenv
 import os
 from utilities.constants import ONE_GB
+from flask_jwt_extended import get_current_user
 
 # Models
 from models.user_model import Users
@@ -23,15 +24,46 @@ from api.User import user_api
 from api.DatasetUtilities import dataset_api
 from api.DataOverview import data_overview_api
 from api.DataCleaning import data_cleaning_api
+from utilities.respond import respond
 
 load_dotenv()
 
 def set_jwt_token():
+
+    # To set a token as expired
     @jwt.token_in_blocklist_loader
     def check_if_token_revoked(jwt_header, jwt_payload):
         jti = jwt_payload["jti"]
         token = TokenBlocklist.query.filter_by(jti = jti).first()
         return token is not None
+
+    # To return the user on get_current_user()
+    @jwt.user_lookup_loader
+    def user_lookup_callback(_jwt_header, jwt_data):
+        # jwt_data => {'fresh': False, 'iat': 1672299841, 'jti': '9fbd2e41-545e-48e7-91d2-f3307bc24c5a', 'type': 'access', 'sub': {'id': 1, 'name': 'Prasahnt', 'email': 'prashant@gmail.com', 'db_count': 2, 'date_added': 'Mon, 15 Aug 2022 14:22:40 GMT', 'user_id': 1}, 'nbf': 1672299841, 'exp': 1672307041}
+        identity = jwt_data["sub"]["id"]
+        return Users.query.filter_by(id=identity).first()
+    
+    # To return cutom rensponse on expired token
+    @jwt.expired_token_loader
+    def expired_token_loader_callback(_jwt_header, jwt_data):
+        return respond(error="Session expired. Please login again", code=401)
+
+    # To return cutom rensponse on revoked token by user
+    @jwt.revoked_token_loader
+    def revoked_token_loader_callback(_jwt_header, jwt_data):
+        return respond(error="No user found. Please login again", code=401)
+
+    # To return cutom rensponse on invalid token
+    @jwt.invalid_token_loader
+    def invalid_token_loader_callback(reason_of_invalid_token):
+        return respond(error="Invalid token. Please login again", code=401)
+
+    # To return cutom rensponse when no token is set
+    @jwt.unauthorized_loader
+    def unauthorized_loader_callback(reason_of_unauthorized):
+        return respond(error="No token found. Please login again", code=401)
+
 
 def set_logger():
     '''
@@ -40,8 +72,8 @@ def set_logger():
     dictConfig({
         'version': 1,
         'formatters': {'default': {
-            'format': '[%(asctime)s] [%(levelname)s] in [%(module)s]: %(message)s',
-            # 'format': '[%(asctime)s] [%(levelname)s] in [%(module)s]:[%(user_email)s] %(message)s',
+            # 'format': '[%(asctime)s] [%(levelname)s] in [%(module)s]: %(message)s',
+            'format': '[%(asctime)s] [%(levelname)s] in [%(module)s]:[%(user_email)s] %(message)s',
         }},
         'handlers': {'wsgi': {
             'class': 'logging.StreamHandler',
@@ -55,21 +87,26 @@ def set_logger():
     })
 
     # =========================   LOGGER CODE FOR USER EMAIL   =========================
-    # old_factory = logging.getLogRecordFactory()
+    old_factory = logging.getLogRecordFactory()
 
-    # def record_factory(*args, **kwargs):
-    #     record = old_factory(*args, **kwargs)
-    #     if current_user and current_user.is_authenticated:
-    #         user = Users.query.get(int(current_user.id))
-    #         if user:
-    #             record.user_email = user.email
-    #         else:
-    #             record.user_email = "No User"
-    #     else:
-    #         record.user_email = "No User"
-    #     return record
+    # below method need @jwt_required for get_current_user() to work thus we used try catch
+    def record_factory(*args, **kwargs):
+        record = old_factory(*args, **kwargs)
+        try:
+            record.user_email = "None"
+            current_user = get_current_user()
+            if current_user and current_user.email:
+                if current_user:
+                    record.user_email = current_user.email
+                else:
+                    record.user_email = "None"
+            else:
+                record.user_email = "None"
+        except Exception as e:
+            record.user_email = "None"
+        return record
 
-    # logging.setLogRecordFactory(record_factory)
+    logging.setLogRecordFactory(record_factory)
 
 def set_celery(app):
     '''
