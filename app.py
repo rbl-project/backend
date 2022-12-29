@@ -72,7 +72,7 @@ def set_logger():
     dictConfig({
         'version': 1,
         'formatters': {'default': {
-            'format': '%(log_color_start)s[%(asctime)s] [%(levelname)s] in [%(module)s]:[%(user_email)s] %(message)s %(log_color_end)s',
+            'format': '[%(asctime)s] %(log_color_start)s[%(levelname)s] in [%(module)s]:[%(user_email)s]%(log_color_end)s %(message)s ',
         }},
         'handlers': {'wsgi': {
             'class': 'logging.StreamHandler',
@@ -99,6 +99,11 @@ def set_logger():
             # set color for error
             if record.levelname == "ERROR":
                 record.log_color_start = "\u001b[31m"
+                record.log_color_end = "\u001b[0m"
+            
+            # set color for info
+            if record.levelname == "INFO":
+                record.log_color_start = "\u001b[34m"
                 record.log_color_end = "\u001b[0m"
             
             # set user email
