@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 from flask import (
     Blueprint,
@@ -234,12 +235,17 @@ def get_datasets():
         all_datasets_list = os.listdir(user_directory)
         all_datasets_dict = []
         for dataset in all_datasets_list:
+            name = dataset.split(".")[0] # remove the .parquet extension
+            name = "_".join(name.split("_")[:-1]) # remove the user id
             temp = {
-                "name":dataset.split(".")[0],
+                "name":name,
+                "modified": datetime.fromtimestamp(os.path.getmtime(os.path.join(user_directory, dataset))).strftime('%d %b, %Y %H:%M:%S'),
                 "size": round(os.path.getsize(os.path.join(user_directory, dataset)) / (1024), 2) # (KB) THIS IS WRONG WE NEED CSV SIZE NOT PARQUET SIZE
             }
             all_datasets_dict.append(temp)
 
+        # sort the list by modified date
+        all_datasets_dict = sorted(all_datasets_dict, key=lambda k: k['modified'], reverse=True)
 
         res = {
             "email": user.email,
