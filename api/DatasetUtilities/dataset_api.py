@@ -79,7 +79,7 @@ def upload_dataset():
 
 
 # Api to delete a dataset
-@datasetAPI.route("/delete-dataset", methods=["POST"])
+@datasetAPI.route("/delete-dataset", methods=["DELETE"])
 @jwt_required()
 def delete_dataset():
     err = None
@@ -90,16 +90,17 @@ def delete_dataset():
             err = "No such user exits"
             raise
 
+        directory = get_user_directory(user.email)
+
         dataset_name = request.json.get("dataset_name")
         if not dataset_name:
             err = "Dataset name is required that is to be deleted"
+            raise
 
         # dataset_name = f'{dataset_name.split(".")[0]}_{user.id}'
         dataset_name = get_dataset_name(user.id, dataset_name)
 
-
         # Check if you have the directory for the user
-        directory = get_user_directory(user.email)
         Path(directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
 
         # Check if the dataset already exists
@@ -126,8 +127,9 @@ def delete_dataset():
         return respond(error=err)
     finally:
         # If directory is empty, delete the directory
-        if not os.listdir(directory):
-            os.rmdir(directory)
+        if directory:
+            if not os.listdir(directory):
+                os.rmdir(directory)
 
 
 # Api to export a dataset
