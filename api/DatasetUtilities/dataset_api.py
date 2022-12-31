@@ -27,6 +27,11 @@ datasetAPI_restful = Api(datasetAPI)
 @datasetAPI.route("/upload-dataset", methods=['POST'])
 @jwt_required()
 def upload_dataset():
+    """
+        TAKES dataset file as input
+        PERFORMS the upload dataset operation
+        RETURNS the success/failure as response
+    """
     err = None
     try:
         current_user = get_jwt_identity()
@@ -82,6 +87,11 @@ def upload_dataset():
 @datasetAPI.route("/delete-dataset", methods=["DELETE"])
 @jwt_required()
 def delete_dataset():
+    """
+        TAKES dataset name as input
+        PERFORMS the delete dataset operation
+        RETURNS the success/failure as response
+    """
     err = None
     try:
         current_user = get_jwt_identity()
@@ -136,6 +146,11 @@ def delete_dataset():
 @datasetAPI.route("/export-dataset", methods=["POST"])
 @jwt_required()
 def export_dataset():
+    """
+        TAKES dataset name as input
+        PERFORMS export the dataset operations
+        RETURNS the csv dataset as response
+    """
     err = None
     try:
         current_user = get_jwt_identity()
@@ -176,6 +191,11 @@ def export_dataset():
 @datasetAPI.route("/rename-dataset", methods=["POST"])
 @jwt_required()
 def rename_dataset():
+    """
+        TAKES dataset name and new dataset name as input
+        PERFORMS the rename operation of old dataset
+        RETURNS the success/failure as response
+    """
     err = None
     try:
         current_user = get_jwt_identity()
@@ -223,6 +243,11 @@ def rename_dataset():
 @datasetAPI.route("/get-datasets", methods=["GET"])
 @jwt_required()
 def get_datasets():
+    """
+        TAKES nothing as input
+        PERFORMS fetch all the datasets of the user
+        RETURNS the list of datasets as response
+    """
     err = None
     try:
         current_user = get_jwt_identity()
@@ -271,6 +296,9 @@ def get_datasets():
 # Api to test redis functionality
 @celery_instance.task
 def keep_alive():
+    """
+    Celery task to keep the redis connection alive
+    """
     import time
     for i in range(5):
         time.sleep(1)

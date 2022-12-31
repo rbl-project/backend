@@ -20,6 +20,11 @@ dataOverviewAPI_restful = Api(dataOverviewAPI)
 @dataOverviewAPI.route('/get-dataset-overview', methods=['POST'])
 @jwt_required()
 def get_dataset_overview():
+    """
+        TAKES dataset name as input
+        PERFORMS the dataset overview operation such as head, tail, info, shape, dtypes
+        RETURNS the overview dictionary as response
+    """
     err = None
     try:
         current_user = get_jwt_identity()
@@ -74,6 +79,11 @@ def get_dataset_overview():
 @dataOverviewAPI.route("/get-columns", methods=["POST"])
 @jwt_required()
 def get_columns():
+    """
+        TAKES dataset name as input
+        PERFORMS the operation to get the columns of the dataset
+        RETURNS the columns list as response
+    """
     err = None
     try:
         current_user = get_jwt_identity()

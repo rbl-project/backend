@@ -4,6 +4,11 @@ from flask_jwt_extended import get_jwt
 from models.jwt_blocklist_model import TokenBlocklist
 from flask import current_app as app
 
+# ============== CONSTANTS ================
+DELETE_CONFIRMATION_MSG = "yes delete account"
+
+
+# ============== METHODS ================
 def revoke_jwt_token():
     try:
             
