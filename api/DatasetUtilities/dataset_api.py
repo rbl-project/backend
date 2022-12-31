@@ -27,6 +27,11 @@ datasetAPI_restful = Api(datasetAPI)
 @datasetAPI.route("/upload-dataset", methods=['POST'])
 @jwt_required()
 def upload_dataset():
+    """
+        TAKES dataset file as input
+        PERFORMS the upload dataset operation
+        RETURNS the success/failure as response
+    """
     err = None
     try:
         current_user = get_jwt_identity()
@@ -79,9 +84,14 @@ def upload_dataset():
 
 
 # Api to delete a dataset
-@datasetAPI.route("/delete-dataset", methods=["POST"])
+@datasetAPI.route("/delete-dataset", methods=["DELETE"])
 @jwt_required()
 def delete_dataset():
+    """
+        TAKES dataset name as input
+        PERFORMS the delete dataset operation
+        RETURNS the success/failure as response
+    """
     err = None
     try:
         current_user = get_jwt_identity()
@@ -90,16 +100,17 @@ def delete_dataset():
             err = "No such user exits"
             raise
 
+        directory = get_user_directory(user.email)
+
         dataset_name = request.json.get("dataset_name")
         if not dataset_name:
             err = "Dataset name is required that is to be deleted"
+            raise
 
         # dataset_name = f'{dataset_name.split(".")[0]}_{user.id}'
         dataset_name = get_dataset_name(user.id, dataset_name)
 
-
         # Check if you have the directory for the user
-        directory = get_user_directory(user.email)
         Path(directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
 
         # Check if the dataset already exists
@@ -126,14 +137,20 @@ def delete_dataset():
         return respond(error=err)
     finally:
         # If directory is empty, delete the directory
-        if not os.listdir(directory):
-            os.rmdir(directory)
+        if directory:
+            if not os.listdir(directory):
+                os.rmdir(directory)
 
 
 # Api to export a dataset
 @datasetAPI.route("/export-dataset", methods=["POST"])
 @jwt_required()
 def export_dataset():
+    """
+        TAKES dataset name as input
+        PERFORMS export the dataset operations
+        RETURNS the csv dataset as response
+    """
     err = None
     try:
         current_user = get_jwt_identity()
@@ -174,6 +191,11 @@ def export_dataset():
 @datasetAPI.route("/rename-dataset", methods=["POST"])
 @jwt_required()
 def rename_dataset():
+    """
+        TAKES dataset name and new dataset name as input
+        PERFORMS the rename operation of old dataset
+        RETURNS the success/failure as response
+    """
     err = None
     try:
         current_user = get_jwt_identity()
@@ -221,6 +243,11 @@ def rename_dataset():
 @datasetAPI.route("/get-datasets", methods=["GET"])
 @jwt_required()
 def get_datasets():
+    """
+        TAKES nothing as input
+        PERFORMS fetch all the datasets of the user
+        RETURNS the list of datasets as response
+    """
     err = None
     try:
         current_user = get_jwt_identity()
@@ -269,6 +296,9 @@ def get_datasets():
 # Api to test redis functionality
 @celery_instance.task
 def keep_alive():
+    """
+    Celery task to keep the redis connection alive
+    """
     import time
     for i in range(5):
         time.sleep(1)

@@ -18,6 +18,14 @@ class Users(db.Model):
         except:
             db.session.rollback()
             raise
+
+    def delete(self):
+        db.session.delete(self)
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
+            raise  
         
     def setPassword(self, password):
         self.password_hash = generate_password_hash(password)

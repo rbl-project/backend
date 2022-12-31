@@ -11,15 +11,22 @@ from flask_jwt_extended import (
     jwt_required
 )
 
-from api.User.utilities import revoke_jwt_token, delete_expired_jwt_tokens
-
+from api.User.utilities import (
+    revoke_jwt_token, 
+    delete_expired_jwt_tokens, 
+    DELETE_CONFIRMATION_MSG
+)
 userAPI = Blueprint("userAPI", __name__)
 userAPI_restful = Api(userAPI)
 
 @userAPI.route("/", methods=['GET'])
 @jwt_required()
 def welcome():
-    # id = current_user.id
+    """
+        TAKES no input
+        PERFORMS the welcome operation
+        RETURNS the welcome message as response
+    """
     current_user = get_jwt_identity()
     user = Users.query.filter_by(id = current_user["id"]).first()
 
@@ -30,8 +37,14 @@ def welcome():
     }
     return respond(data=res)
 
+
 @userAPI.route("/register", methods=['POST'])
 def register():
+    """
+        TAKES name, email, password as input
+        PERFORMS the registration operation
+        RETURNS the success/failure message as response
+    """
     err = None
     try:
         if not request.is_json:
@@ -82,6 +95,11 @@ def register():
 @userAPI.route('/logout', methods=['GET', 'POST'])
 @jwt_required()
 def logout():
+    """
+        TAKES no input
+        PERFORMS the logout operation
+        RETURNS the success/failure message as response
+    """
     err = None
     try:
         current_user = get_jwt_identity()
@@ -105,6 +123,11 @@ def logout():
 
 @userAPI.route('/login', methods=['POST'])
 def login():
+    """
+        TAKES email, password as input
+        PERFORMS the login operation
+        RETURNS the access_token, user_details as response
+    """
     err = None
     try:
         email = request.json.get("email", None)
@@ -129,7 +152,7 @@ def login():
         # login_user(user)
         access_token = create_access_token(identity=user.to_json())
        
-        app.logger.info("Login Successfull")
+        app.logger.info(" %s Login Successfull", user.name)
         
         res = {
             "msg":'User Logged In successfully',
@@ -143,8 +166,14 @@ def login():
             err = "Error in Login"
         return respond(error=err)
 
+
 @userAPI.route("/all-users", methods=["GET"])
 def get_all_users():
+    """
+        TAKES no input
+        PERFORMS the fetch all users operation
+        RETURNS the list of all users as response
+    """
     err = None
     try:
         all_users = Users.query.all()
@@ -160,4 +189,66 @@ def get_all_users():
         app.logger.error("Error in fetching all the users. Error=> %s. Exception=> %s",err, str(e))
         if not err:
             err = "Error in fetching all the users"
+        return respond(error=err)
+
+
+@userAPI.route("/delete-user", methods=["DELETE"])
+@jwt_required()
+def delete_user():
+    """
+        TAKES eamil, password and confirmation_text as input
+        PERFORMS the delete user operation
+        RETURNS the success/failure message as response
+    """
+    err = None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        email = request.json.get("email", None)
+        if not email:
+            err = "Email is required"
+            raise
+
+        if email != user.email:
+            err = "Bad Credentials. Try again"
+            raise
+
+        password = request.json.get("password", None)
+        if not password:
+            err = "Password is required"
+            raise
+
+        confirmation_text = request.json.get("confirmation_text", None)
+        if not confirmation_text:
+            err = "Confirmation text is required"
+            raise
+
+        if confirmation_text != DELETE_CONFIRMATION_MSG:
+            err = "Confirmation text is invalid"
+            raise
+
+        if not user.verify_password(password):
+            err = "Bad Credentials. Try again"
+            raise
+
+        user.delete()
+
+        app.logger.info("User Deleted Successfully and Logged Out!")
+
+        revoke_jwt_token()
+        delete_expired_jwt_tokens()
+
+        res = {
+            "msg":"User Deleted Successfully"
+        }
+        return respond(data=res)
+
+    except Exception as e:
+        app.logger.error("Error in deleting the user. Error=> %s. Exception=> %s",err, str(e))
+        if not err:
+            err = "Error in deleting the user"
         return respond(error=err)
