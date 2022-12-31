@@ -84,7 +84,7 @@ def upload_dataset():
 
 
 # Api to delete a dataset
-@datasetAPI.route("/delete-dataset", methods=["DELETE"])
+@datasetAPI.route("/delete-dataset", methods=["POST"])
 @jwt_required()
 def delete_dataset():
     """
