@@ -272,7 +272,7 @@ def get_datasets():
             all_datasets_dict.append(temp)
 
         # sort the list by modified date
-        all_datasets_dict = sorted(all_datasets_dict, key=lambda k: k['modified'], reverse=True)
+        all_datasets_dict = sorted(all_datasets_dict, key=lambda k: datetime.strptime(k['modified'], '%d %b, %Y %H:%M:%S'), reverse=True)
 
         res = {
             "email": user.email,
