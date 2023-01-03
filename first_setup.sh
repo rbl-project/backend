@@ -64,7 +64,7 @@ sudo ln -s /etc/nginx/sites-available/rbl_backend /etc/nginx/sites-enabled/
 
 # Install virtualenv
 echo -e "\nInstalling virtualenv"
-sudo pip3 install -y virtualenv
+sudo pip3 install virtualenv
 
 # Make virtualev
 echo -e "\nCreating the virtual environment"
