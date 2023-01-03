@@ -83,7 +83,7 @@ pip3 install -r requirements.txt
 echo -e "\nSetting up the database"
 echo -e "\nExporting the database variables to bashrc"
 sudo echo "" >> ~/.bashrc
-sudo echo "export FLASK_APP='rbl_backend'" >> ~/.bashrc
+sudo echo "export FLASK_APP='app.py'" >> ~/.bashrc
 sudo echo "export DATABASE_URL='postgresql://eplfcjzsjrlefx:bfd39aa631ea4971aa380f49dada5a6463a0439d0d977058cf7243b60610eae0@ec2-54-208-104-27.compute-1.amazonaws.com:5432/dbh4a6k8ork3tk'" >> ~/.bashrc
 source ~/.bashrc
 
