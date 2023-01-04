@@ -36,6 +36,8 @@ echo -e "\n======Make the posgres super user======\n"
 sudo -u postgres createuser --superuser prash_psql
 echo -e "\n======Set the password for super user======\n"
 sudo -u postgres psql -c "ALTER ROLE prash_psql WITH PASSWORD 'prash123';"
+echo -e "\n======Create the database======\n"
+sudo -u postgres createdb rbl_db
 
 sleep 2
 
