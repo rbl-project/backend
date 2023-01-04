@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # This script is used for complete setup of the project in a fresh Ubuntu 20.04 LTS version
 # Since ubuntu 20.04 has the python 3.8.10 version, we don't need to install it. 
