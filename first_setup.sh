@@ -43,6 +43,10 @@ sudo apt install -y python3-pip
 echo -e "\n======Installing Redis======\n"
 sudo apt-get install -y redis-server
 
+# Starting the redis server and postgresql server
+echo -e "\n======Starting the redis server======\n"
+sudo service redis-server start
+
 # Install Postgres
 echo -e "\n======Installing Posgresql======\n"
 sudo apt install -y postgresql postgresql-contrib
@@ -54,6 +58,10 @@ echo -e "\n======Set the password for super user======\n"
 sudo -u postgres psql -c "ALTER ROLE prash_psql WITH PASSWORD 'prash123';"
 echo -e "\n======Create the database======\n"
 sudo -u postgres createdb rbl_db
+
+
+echo -e "\n======Starting the postgresql server======\n"
+sudo service postgresql start
 
 sleep 3
 
@@ -121,13 +129,6 @@ echo -e "\n======Creating the database======\n"
 flask db init
 flask db migrate
 flask db upgrade
-
-# Starting the redis server and postgresql server
-echo -e "\n======Starting the redis server======\n"
-sudo service redis-server start
-
-echo -e "\n======Starting the postgresql server======\n"
-sudo service postgresql start
 
 echo -e "\n======Starting the gunicorn server======\n"
 gunicorn --bind 0.0.0.0:8000 app:app
