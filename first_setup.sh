@@ -15,6 +15,22 @@ do
     esac
 done
 
+echo -e "\n======Checking the script compatibility======\n"
+
+if [[ -n $ip_address ]]; then
+    echo -e "\nProvided server address: $ip_address\n"
+else
+    echo -e "\nNo server address was provided. Exiting the setup\n"
+    exit 1
+fi
+
+if [ -f ".env" ]; then
+    echo -e "\nEnvironment file found. Proceeding with the setup\n"
+else
+    echo -e "\nEnvironment file not found. Exiting the setup\n"
+    exit 1
+fi
+
 # Updating the packages
 echo -e "\n======Updating the packages======\n"
 sudo apt update
@@ -39,7 +55,7 @@ sudo -u postgres psql -c "ALTER ROLE prash_psql WITH PASSWORD 'prash123';"
 echo -e "\n======Create the database======\n"
 sudo -u postgres createdb rbl_db
 
-sleep 2
+sleep 3
 
 # Nginx Configuration
 echo -e "\n======Installing Nginx======\n"
@@ -62,10 +78,15 @@ location / {
 }                
 EOF
 
-sleep 2
+sleep 3
 
 echo -e "\n======Enabling the configuration file======\n"
 sudo ln -s /etc/nginx/sites-available/rbl_backend /etc/nginx/sites-enabled/
+
+echo -e "\n======Restarting the Nginx======\n"
+sudo service nginx restart
+
+sleep 3
 
 # Install virtualenv
 echo -e "\n======Installing virtualenv======\n"
