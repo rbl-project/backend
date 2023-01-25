@@ -1,7 +1,7 @@
 from flask import Blueprint
 from flask import current_app as app
 from models.user_model import Users
-from utilities.methods import is_email_valid
+from utilities.methods import is_email_valid, log_error
 from utilities.respond import respond
 from flask_restful import  Api
 from flask import request
@@ -86,7 +86,7 @@ def register():
         }
         return respond(data=res, code=201)
     except Exception as e:
-        app.logger.error("Error in registering the user. Error=> %s. Exception=> %s",err, str(e))
+        log_error(err_msg="Error in registering the user", error=err, exception=e)
         if not err:
             err = "Error in registration"
         return respond(error=err)
@@ -115,7 +115,7 @@ def logout():
 
         return respond(data="Logged Out Successfully")
     except Exception as e:
-        app.logger.error("Error in logout. Error= %s. Exception= %s", err, str(e))
+        log_error(err_msg="Error in logout", error=err, exception=e)
         if not err:
             err = "Error in logout."
         return respond(error=err)
@@ -161,7 +161,7 @@ def login():
         }
         return respond(data=res)
     except Exception as e:
-        app.logger.error("Error in login. Error=> %s. Exception=> %s",err, str(e))
+        log_error(err_msg="Error in login", error=err, exception=e)
         if not err:
             err = "Error in Login"
         return respond(error=err)
@@ -186,7 +186,7 @@ def get_all_users():
         }
         return respond(data=res)
     except Exception as e:
-        app.logger.error("Error in fetching all the users. Error=> %s. Exception=> %s",err, str(e))
+        log_error(err_msg="Error in fetching all the users", error=err, exception=e)
         if not err:
             err = "Error in fetching all the users"
         return respond(error=err)
@@ -248,7 +248,7 @@ def delete_user():
         return respond(data=res)
 
     except Exception as e:
-        app.logger.error("Error in deleting the user. Error=> %s. Exception=> %s",err, str(e))
+        log_error(err_msg="Error in deleting the user", error=err, exception=e)
         if not err:
             err = "Error in deleting the user"
         return respond(error=err)
