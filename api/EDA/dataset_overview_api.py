@@ -177,11 +177,13 @@ def describe_categorical_data():
             temp = df_categorical_described[col]
             temp["name"] = col
             temp["mode"] = temp["top"]
-            temp["mode_count"] = temp["count"]
+            temp["mode_count"] = temp["freq"]
+            temp["unique_count"] = temp["unique"]
             temp["data_type"] = str(df_categorical[col].dtype)
 
             del temp['top']
-            del temp['count'] # mode_count is already there
+            del temp['unique']
+            del temp['freq']
 
             col_sorted_desciption.append(temp)
 
