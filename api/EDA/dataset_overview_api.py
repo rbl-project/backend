@@ -126,7 +126,9 @@ def describe_numerical_data():
             col_sorted_desciption.append(temp)
 
         res = {
-            "columns":col_sorted_desciption
+            "columns":col_sorted_desciption,
+            "n_numerical_columns": df_numerical.shape[1],
+            "n_categorical_columns" : df.shape[1] - df_numerical.shape[1]
         }
 
         return respond(data=res)
@@ -188,7 +190,9 @@ def describe_categorical_data():
             col_sorted_desciption.append(temp)
 
         res = {
-            "columns":col_sorted_desciption
+            "columns":col_sorted_desciption,
+            "n_categorical_columns": df_categorical.shape[1],
+            "n_numerical_columns": df.shape[1] - df_categorical.shape[1]
         }
 
         return respond(data=res)
