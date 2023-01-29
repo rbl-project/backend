@@ -243,13 +243,13 @@ def graphical_representation():
         # Numerical vs Categorical Pie Chart Data
         numerical_vs_categorical_pie_chart = [
             {
-                "id": "1",
-                "label":"Numerical Features",
+                "id": "Numerical Columns",
+                "label":"Numerical Columns",
                 "value": n_numerical_columns
             },
             {
-                "id": "2",
-                "label":"Categorical Features",
+                "id": "Categorical Columns",
+                "label":"Categorical Columns",
                 "value": n_categorical_columns
             }
         ]
@@ -268,15 +268,15 @@ def graphical_representation():
         # non_null_vs_null_pie_chart
         non_null_vs_null_pie_chart = [
             {
-                "id": "1",
+                "id": "Non Null Values",
+                "label": "Non Null Values",
+                "value": n_non_null_values
+            },
+            {
+                "id": "Null Values",
                 "label": "Null Values",
                 "value": n_null_values
             }, 
-            {
-                "id": "2",
-                "label": "Non Null Values",
-                "value": n_non_null_values
-            }
         ]
 
 
