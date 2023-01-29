@@ -24,6 +24,9 @@ from api.User import user_api
 from api.DatasetUtilities import dataset_api
 from api.DataOverview import data_overview_api
 from api.DataCleaning import data_cleaning_api
+from api.EDA import dataset_overview_api
+
+# Utility
 from utilities.respond import respond
 
 load_dotenv()
@@ -138,6 +141,7 @@ def add_end_points(app):
     app.register_blueprint(data_visualization_api.dataVisulizationAPI, url_prefix = "/api")
     app.register_blueprint(data_overview_api.dataOverviewAPI, url_prefix = "/api")
     app.register_blueprint(data_cleaning_api.dataCleaningAPI, url_prefix = "/api")
+    app.register_blueprint(dataset_overview_api.datasetOverviewAPI, url_prefix = "/api")
 
 def configure_app(app):
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("POSTGRESS_DATABASE_URL")

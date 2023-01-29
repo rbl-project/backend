@@ -55,7 +55,8 @@ def save_dataset(df, dataset_name, user_id, user_email):
         app.logger.error("Error in saving the dataset")
         raise Exception(e)
 
-
+def log_error(err_msg = None, error=None, exception=None):
+    app.logger.error("%s. Error=> %s. Exception=> %s",err_msg, error, str(exception))
 
 
 # =========================OLDER UNNECESSARY CODE=========================

@@ -19,3 +19,5 @@ vuln-list/
 .env
 migrations/
 *.parquet
+*.ipynb
+*.csv
