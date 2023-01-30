@@ -8,6 +8,7 @@ from flask_jwt_extended import (
     jwt_required,
     get_jwt_identity
 )
+import json
 from flask_restful import Api
 from models.user_model import Users
 from utilities.respond import respond
@@ -63,10 +64,9 @@ def basic_information():
             col_with_dtypes.append(temp)
 
         # head
-        head = df.head().to_numpy().tolist()
-        columns = df.columns.tolist()
-        head.insert(0, columns)
-
+        head = df.head().to_json(orient='split')
+        head = json.loads(head)
+        
         res = {
             "dataset_name":dataset_name,
             "n_columns":n_columns,
