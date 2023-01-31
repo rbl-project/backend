@@ -8,6 +8,7 @@ from flask_jwt_extended import (
     jwt_required,
     get_jwt_identity
 )
+import json
 from flask_restful import Api
 from models.user_model import Users
 from utilities.respond import respond
@@ -63,10 +64,9 @@ def basic_information():
             col_with_dtypes.append(temp)
 
         # head
-        head = df.head().to_numpy().tolist()
-        columns = df.columns.tolist()
-        head.insert(0, columns)
-
+        head = df.head().to_json(orient='split')
+        head = json.loads(head)
+        
         res = {
             "dataset_name":dataset_name,
             "n_columns":n_columns,
@@ -115,7 +115,8 @@ def describe_numerical_data():
 
         df_numerical = df.select_dtypes(exclude=['bool', 'object']) # https://note.nkmk.me/en/python-pandas-dtype-astype/#:~:text=Sponsored%20Link-,List%20of%20basic%20data%20types%20(dtype)%20in%20pandas,-The%20following%20is
    
-        df_numerical_described = df_numerical.describe().to_dict()
+        df_numerical_described = df_numerical.describe().to_json(orient='columns')
+        df_numerical_described = json.loads(df_numerical_described)
 
         column = df_numerical.columns.tolist()
         col_sorted_desciption = []
@@ -172,6 +173,7 @@ def describe_categorical_data():
         df_categorical = df.select_dtypes(include=['bool', 'object']) # https://note.nkmk.me/en/python-pandas-dtype-astype/#:~:text=Sponsored%20Link-,List%20of%20basic%20data%20types%20(dtype)%20in%20pandas,-The%20following%20is
    
         df_categorical_described = df_categorical.describe().to_dict()
+        print(df_categorical_described)
 
         column = df_categorical.columns.tolist()
         col_sorted_desciption = []
