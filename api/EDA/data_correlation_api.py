@@ -1,5 +1,7 @@
 """ Dat Correlation APIs for EDA """
 
+import base64
+from api.EDA.utilities_eda import get_image
 from flask import (
     Blueprint,
     request,
@@ -104,6 +106,7 @@ def correlation_matrix():
         
         # Correlation Matrix && Column List
         column_list = []
+        column_list.append({"id":"column_name","label":"","included":True})
         correlation_matrix = []
         correlation_matrix_json = json.loads(df[included_column_list].corr().round(2).to_json(orient='index'))
         
@@ -124,10 +127,6 @@ def correlation_matrix():
         # Not Included Numerical Columns List
         numerical_columns = df.select_dtypes(exclude=['bool', 'object']).columns.tolist()
         non_included_numerical_columns = list(set(numerical_columns) - set(included_column_list))
-        
-        print(included_column_list)
-        print(numerical_columns)
-        print(non_included_numerical_columns)
         
         for column in non_included_numerical_columns:
             
@@ -195,13 +194,19 @@ def scatter_plot():
         if err:
             raise
         
+        # Scatter Plot
         df.plot.scatter(x=coulmn1, y=coulmn2)
         
-        bytes_image = io.BytesIO()
-        plt.savefig(bytes_image, format='png')
-        bytes_image.seek(0)
+        # Converting scatter plot to base64 string
+        plt.tight_layout()
+        scatter_plot_image = get_image(plt)
         
-        return send_file(bytes_image, mimetype='image/png')
+        plt.close()
+        res = {
+            "scatter_plot":scatter_plot_image
+        }
+        
+        return respond(data=res) 
         
     except Exception as e:
         log_error(err_msg="Error in Scatter Plot", error=err, exception=e)
@@ -209,9 +214,9 @@ def scatter_plot():
             err = "Error in Scatter Plot"
         return respond(error=err)
         
-@dataCorrelationAPI.route("/heatmap", methods=['POST'])
+@dataCorrelationAPI.route("/correlation-heatmap", methods=['POST'])
 @jwt_required()
-def heatmap():
+def correlation_heatmap():
     """
         TAKES dataset name and column list as input
         PERFORMS generation of heatmap
@@ -245,14 +250,19 @@ def heatmap():
         
         # Correlation Matrix && Heatmap
         correlation_matrix = df[included_column_list].corr().round(2)
-        print(correlation_matrix)
+        # plt.matshow(correlation_matrix)
         sns.heatmap(correlation_matrix, annot=True)
+        plt.tight_layout()
+        # Converting heatmap to base64 string
+        heatmap_image = get_image(plt)
         
-        bytes_image = io.BytesIO()
-        plt.savefig(bytes_image, format='png')
-        bytes_image.seek(0)
+        plt.close()
         
-        return send_file(bytes_image, mimetype='image/png')
+        res = {
+            "heatmap":heatmap_image
+        }
+        
+        return respond(data=res)
     
     except Exception as e:
         log_error(err_msg="Error in Heatmap", error=err, exception=e)
