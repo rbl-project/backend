@@ -96,9 +96,9 @@ def correlation_matrix():
             raise
         
         included_column_list = request.json.get("column_list")
-        if not included_column_list:
-            err = "Column list is required"
-            raise
+        # if not included_column_list:
+        #     err = "Column list is required"
+        #     raise
 
         df, err = load_dataset(dataset_name, user.id, user.email)
         if err:
@@ -106,7 +106,7 @@ def correlation_matrix():
         
         # Correlation Matrix && Column List
         column_list = []
-        column_list.append({"id":"column_name","label":"","included":True})
+        column_list.append({"id":"column_name","label":"","included": True if len(included_column_list) > 0 else False})
         correlation_matrix = []
         correlation_matrix_json = json.loads(df[included_column_list].corr().round(2).to_json(orient='index'))
         
