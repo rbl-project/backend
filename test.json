@@ -1,0 +1,16 @@
+{
+    "search": {
+        "col1":["value1", "value2", "value3"],
+        "col2":["value1", "value2", "value3"]
+    },
+    "sort": {
+        "col1": "asc",
+        "col2": "desc"
+    },
+    "filter":{
+        "end":true,
+        "columns": ["col1", "col2"],
+        "row_start": 0,
+        "row_end": 10
+    }
+}
