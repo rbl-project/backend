@@ -25,7 +25,8 @@ tabularRepresentationAPI_restful = Api(tabularRepresentationAPI)
 def tabular_representation():
     """
         TAKES dataset name as input
-        PERFORMS the filtering, sorting and searching on dataset
+        PERFORMS the searching, sorting and then filtering in that order on the given dataset. 
+                 Filtering is performed on searched and sorted dataset
         RETURNS the filtered dataset as response
     """
     err = None
@@ -96,8 +97,8 @@ def tabular_representation():
         n_rows = shape[0]
         n_columns = shape[1]
 
-        if n_rows <= 50:
-            data = None
+        if n_rows > 50:
+            dataframe = None
             head = temp_df.head(10)
             head = head.to_json(orient='split')
             head = json.loads(head)
@@ -110,10 +111,10 @@ def tabular_representation():
             tail = None
             temp_df = temp_df.to_json(orient='split')
             temp_df = json.loads(temp_df)
-            data = temp_df
+            dataframe = temp_df
 
         res = {
-            "data": data,
+            "dataframe": dataframe,
             "n_rows": n_rows,
             "n_columns": n_columns,
             "head": head,
