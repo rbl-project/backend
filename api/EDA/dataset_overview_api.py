@@ -115,8 +115,11 @@ def describe_numerical_data():
 
         df_numerical = df.select_dtypes(exclude=['bool', 'object']) # https://note.nkmk.me/en/python-pandas-dtype-astype/#:~:text=Sponsored%20Link-,List%20of%20basic%20data%20types%20(dtype)%20in%20pandas,-The%20following%20is
    
-        df_numerical_described = df_numerical.describe().to_json(orient='columns')
-        df_numerical_described = json.loads(df_numerical_described)
+        df_numerical_described = {}
+        # If Numerical columns are present then only call describe function
+        if df_numerical.shape[1] > 0:
+            df_numerical_described = df_numerical.describe().to_json(orient='columns')
+            df_numerical_described = json.loads(df_numerical_described)
 
         column = df_numerical.columns.tolist()
         col_sorted_desciption = []
@@ -171,9 +174,12 @@ def describe_categorical_data():
             raise
 
         df_categorical = df.select_dtypes(include=['bool', 'object']) # https://note.nkmk.me/en/python-pandas-dtype-astype/#:~:text=Sponsored%20Link-,List%20of%20basic%20data%20types%20(dtype)%20in%20pandas,-The%20following%20is
-   
-        df_categorical_described = df_categorical.describe().to_dict()
 
+        df_categorical_described = {}
+        # If Categorical columns are present then only call describe function
+        if df_categorical.shape[1] > 0:
+            df_categorical_described = df_categorical.describe().to_dict()
+        
         column = df_categorical.columns.tolist()
         col_sorted_desciption = []
         for col in column:
