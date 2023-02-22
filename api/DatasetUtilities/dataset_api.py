@@ -10,7 +10,9 @@ from models.user_model import Users
 from utilities.methods import ( 
     get_dataset_name, 
     get_parquet_dataset_file_name, 
-    get_user_directory
+    get_user_directory,
+    load_dataset,
+    log_error
 )
 from utilities.respond import respond
 from flask_restful import  Api
@@ -293,6 +295,100 @@ def get_datasets():
             os.rmdir(user_directory)
 
 
+# Api to get the categorical columns of the dataset
+@datasetAPI.route("/get-categorical-columns-info", methods=["POST"])
+@jwt_required()
+def get_categorical_columns_info():
+    """
+        TAKES dataset name as input
+        PERFORMS fetch the categorical columns of the dataset
+        RETURNS the list of categorical columns as response
+    """
+    err = None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
+            raise
+
+        # get the categorical columns
+        categorical_columns = df.select_dtypes(include=['object', 'bool']).columns.tolist()
+
+        res = {
+            "categorical_columns":categorical_columns,
+            "n_categorical_columns":len(categorical_columns),
+        }
+
+        return respond(data=res)
+    
+    except Exception as e:
+        log_error(err_msg="Error in fetching the Categorical Columns List", error=err, exception=e)
+        if not err:
+            err = "Error in fetching the Categorical Columns List"
+        return respond(error=err)
+    
+
+# Api to get the numerical columns of the dataset
+@datasetAPI.route("/get-numerical-columns-info", methods=["POST"])
+@jwt_required()
+def get_numerical_columns_info():
+    """
+        TAKES dataset name as input
+        PERFORMS fetch the numerical columns of the dataset
+        RETURNS the list of numerical columns as response
+    """
+    err = None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
+            raise
+
+        # get the numerical columns
+        numerical_columns = df.select_dtypes(exclude=['object', 'bool']).columns.tolist()
+
+        res = {
+            "numerical_columns":numerical_columns,
+            "n_numerical_columns":len(numerical_columns),
+        }
+
+        return respond(data=res)
+    
+    except Exception as e:
+        log_error(err_msg="Error in fetching the Numerical Columns List", error=err, exception=e)
+        if not err:
+            err = "Error in fetching the Numerical Columns List"
+        return respond(error=err)
+    
+    
 # Api to test redis functionality
 @celery_instance.task
 def keep_alive():
