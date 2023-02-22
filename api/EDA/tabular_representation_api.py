@@ -4,6 +4,7 @@
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restful import Api
+from api.EDA.utilities_eda import ROW_END
 
 # UTILITIES
 from utilities.respond import respond
@@ -85,10 +86,14 @@ def tabular_representation():
             # }
         filter_obj = request.json.get("filter", None)
         if filter_obj:
-            if filter_obj["end"]:
-                temp_df = temp_df[filter_obj["columns"]].iloc[filter_obj["row_start"]:]
+            # if no columns are given then consider all columns
+            if not filter_obj["columns"]:
+                filter_obj["columns"] = df.columns.tolist()
+
+            if filter_obj["row_end"] == ROW_END:
+                temp_df = temp_df[filter_obj["columns"]].iloc[int(filter_obj["row_start"]):]
             else:
-                temp_df = temp_df[filter_obj["columns"]].iloc[filter_obj["row_start"]:filter_obj["row_end"]]
+                temp_df = temp_df[filter_obj["columns"]].iloc[int(filter_obj["row_start"]):int(filter_obj["row_end"])]
 
         
 

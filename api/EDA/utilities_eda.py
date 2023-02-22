@@ -11,3 +11,6 @@ def get_image(plt):
     bytes_image.seek(0)
     image_str = base64.b64encode(bytes_image.read()).decode('utf-8')
     return image_str
+
+# =========CONSTANTS================
+ROW_END = "end"
