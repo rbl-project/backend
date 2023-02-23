@@ -10,6 +10,7 @@ from flask_jwt_extended import (
     get_jwt_identity
 )
 import matplotlib.pyplot as plt
+import seaborn as sns
 from flask_restful import Api
 from models.user_model import Users
 from utilities.respond import respond
@@ -54,13 +55,13 @@ def generate_graph():
             err = "Number of columns is required"
             raise
             
-        coulmn1 = request.json.get("column1")
-        if not coulmn1:
+        column1 = request.json.get("column1")
+        if not column1:
             err = "Column1 is required"
             raise
         
-        coulmn2 = request.json.get("column2")
-        if n_columns == 2 and not coulmn2:
+        column2 = request.json.get("column2")
+        if n_columns == 2 and not column2:
             err = "Column2 is required"
             raise
 
@@ -68,17 +69,26 @@ def generate_graph():
         if err:
             raise
         
+        # Chart Styling
+        plt.style.use('ggplot')
+        sns.set_style('darkgrid') # darkgrid, white grid, dark, white and ticks
+        
         # Generating Graph
         if n_columns == 1:
             if graph_type == "bar":
-                df[coulmn1].value_counts().plot(kind=graph_type)
+                df[column1].value_counts().plot(kind=graph_type,xlabel=column1,ylabel="count")
             elif graph_type == "pie":
-                df[coulmn1].value_counts().plot(kind=graph_type)
+                df[column1].value_counts().plot(kind=graph_type, autopct='%.1f%%', startangle=45,  wedgeprops={'linewidth': 6})
+            elif graph_type == "hist" or graph_type == "density":
+                df.plot(kind=graph_type,y=column1,xlabel=column1)
+            elif graph_type == "line":
+                df.plot(kind=graph_type,y=column1,xlabel="index",ylabel=column1)
             else:
-                df.plot(kind=graph_type,y=coulmn1)
+                df.plot(kind=graph_type,y=column1 ,xlabel=column1,ylabel="count")
         else:
-            df.plot(kind=graph_type,x=coulmn1, y=coulmn2)
+            df.plot(kind=graph_type,x=column1, y=column2, xlabel=column1, ylabel=column2)
         
+       
         # Converting scatter plot to base64 string
         plt.tight_layout()
         graph_image = get_image(plt)
@@ -87,8 +97,8 @@ def generate_graph():
         res = {
             "graph_type":graph_type,
             "n_columns":n_columns,
-            "column1":coulmn1,
-            "column2":coulmn2,
+            "column1":column1,
+            "column2":column2,
             "graph":graph_image
         }
         
