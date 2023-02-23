@@ -101,16 +101,27 @@ def tabular_representation():
         shape = temp_df.shape
         n_rows = shape[0]
         n_columns = shape[1]
+        dataframe = None
 
+        from flask import current_app as app
         if n_rows > 50:
-            dataframe = None
-            head = temp_df.head(10)
+            head = temp_df.head(5)
             head = head.to_json(orient='split')
             head = json.loads(head)
 
-            tail = temp_df.tail(10)
+            tail = temp_df.tail(5)
             tail = tail.to_json(orient='split')
             tail = json.loads(tail)
+
+            # we are sending head + 2 dotted rows + tail
+            final_data = head["data"] + [['...']*n_columns]*2 + tail["data"]
+            final_cols = head["columns"]
+
+            dataframe = {
+                "data": final_data,
+                "columns": final_cols
+            }
+
         else:
             head = None
             tail = None
@@ -122,8 +133,6 @@ def tabular_representation():
             "dataframe": dataframe,
             "n_rows": n_rows,
             "n_columns": n_columns,
-            "head": head,
-            "tail": tail
         }
 
         return respond(data=res)

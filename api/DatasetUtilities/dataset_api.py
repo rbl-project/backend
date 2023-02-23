@@ -66,7 +66,7 @@ def upload_dataset():
         
         # Read the csv and convert it into parquet
         df = pd.read_csv(dataset)
-        df.to_parquet(dataset_file, compression="snappy", index=False)
+        df.to_parquet(dataset_file, compression="snappy", index=True)
 
         user.db_count = user.db_count + 1
         user.save()
@@ -331,16 +331,19 @@ def get_columns_info():
         # get the categorical columns
         categorical_columns = df.select_dtypes(include=['object', 'bool']).columns.tolist()
 
-        # get the unique values of each categorical column
+        # get the unique values of categorical column which have less than 100 unique values
         values = {}
+        final_categorical_columns = []
         for column in categorical_columns:
-            values[column] = df[column].unique().tolist()
+            if len(df[column].unique()) <= 100:
+                final_categorical_columns.append(column)
+                values[column] = df[column].unique().tolist()
 
         # get the numerical columns
         numerical_columns = df.select_dtypes(exclude=['object', 'bool']).columns.tolist()
 
         res = {
-            "categorical_columns":categorical_columns,
+            "categorical_columns":final_categorical_columns,
             "numerical_columns":numerical_columns,
             "categorical_values": values,
             "all_columns":all_columns
