@@ -293,6 +293,70 @@ def get_datasets():
         # If directory is empty, delete the directory
         if not os.listdir(user_directory):
             os.rmdir(user_directory)
+            
+
+# Api to get the categorical columns of the dataset
+@datasetAPI.route("/get-columns-info", methods=["POST"])
+@jwt_required()
+def get_columns_info():
+    """
+        TAKES dataset name as input
+        PERFORMS fetch the categorical columns of the dataset
+        RETURNS the list of categorical columns as response
+    """
+    err = None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
+            raise
+        
+        # all the columns
+        all_columns = df.columns.tolist()
+
+        # get the categorical columns
+        categorical_columns = df.select_dtypes(include=['object', 'bool']).columns.tolist()
+
+        # get the unique values of categorical column which have less than 100 unique values
+        values = {}
+        final_categorical_columns = []
+        for column in categorical_columns:
+            if len(df[column].unique()) <= 100:
+                final_categorical_columns.append(column)
+                values[column] = df[column].unique().tolist()
+
+        # get the numerical columns
+        numerical_columns = df.select_dtypes(exclude=['object', 'bool']).columns.tolist()
+
+        res = {
+            "categorical_columns":final_categorical_columns,
+            "numerical_columns":numerical_columns,
+            "categorical_values": values,
+            "all_columns":all_columns
+        }
+
+        return respond(data=res)
+    
+    except Exception as e:
+        log_error(err_msg="Error in fetching the categorical Columns List", error=err, exception=e)
+        if not err:
+            err = "Error in fetching the categorical Columns List"
+        return respond(error=err)
+
 
 
 # Api to get the categorical columns of the dataset
@@ -369,3 +433,99 @@ def keep_alive():
     for i in range(5):
         time.sleep(1)
         print("Celery task running")
+        
+        
+# Api to get the categorical columns of the dataset
+@datasetAPI.route("/get-categorical-columns-info", methods=["POST"])
+@jwt_required()
+def get_categorical_columns_info():
+    """
+        TAKES dataset name as input
+        PERFORMS fetch the categorical columns of the dataset
+        RETURNS the list of categorical columns as response
+    """
+    err = None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
+            raise
+
+        # get the categorical columns
+        categorical_columns = df.select_dtypes(include=['object', 'bool']).columns.tolist()
+
+        res = {
+            "categorical_columns":categorical_columns,
+            "n_categorical_columns":len(categorical_columns),
+        }
+
+        return respond(data=res)
+    
+    except Exception as e:
+        log_error(err_msg="Error in fetching the Categorical Columns List", error=err, exception=e)
+        if not err:
+            err = "Error in fetching the Categorical Columns List"
+        return respond(error=err)
+    
+
+# Api to get the numerical columns of the dataset
+@datasetAPI.route("/get-numerical-columns-info", methods=["POST"])
+@jwt_required()
+def get_numerical_columns_info():
+    """
+        TAKES dataset name as input
+        PERFORMS fetch the numerical columns of the dataset
+        RETURNS the list of numerical columns as response
+    """
+    err = None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
+            raise
+
+        # get the numerical columns
+        numerical_columns = df.select_dtypes(exclude=['object', 'bool']).columns.tolist()
+
+        res = {
+            "numerical_columns":numerical_columns,
+            "n_numerical_columns":len(numerical_columns),
+        }
+
+        return respond(data=res)
+    
+    except Exception as e:
+        log_error(err_msg="Error in fetching the Numerical Columns List", error=err, exception=e)
+        if not err:
+            err = "Error in fetching the Numerical Columns List"
+        return respond(error=err)
+    
+    

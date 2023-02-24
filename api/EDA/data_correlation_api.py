@@ -1,18 +1,15 @@
 """ Dat Correlation APIs for EDA """
 
-import base64
 from api.EDA.utilities_eda import get_image
 from flask import (
     Blueprint,
     request,
-    send_file
 )
 from flask_jwt_extended import (
     jwt_required,
     get_jwt_identity
 )
 import json
-import io
 import matplotlib.pyplot as plt
 import seaborn as sns
 from flask_restful import Api
