@@ -342,11 +342,17 @@ def get_columns_info():
         # get the numerical columns
         numerical_columns = df.select_dtypes(exclude=['object', 'bool']).columns.tolist()
 
+        # numbert of rows and columns
+        rows = df.shape[0]
+        columns = df.shape[1]
+
         res = {
             "categorical_columns":final_categorical_columns,
             "numerical_columns":numerical_columns,
             "categorical_values": values,
-            "all_columns":all_columns
+            "all_columns":all_columns,
+            "n_rows":rows,
+            "n_columns":columns
         }
 
         return respond(data=res)
