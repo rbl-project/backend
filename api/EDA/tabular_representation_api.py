@@ -57,15 +57,24 @@ def tabular_representation():
         
         # 1. SEARCHING
             # "search": {
-            #     "col1":["value1", "value2", "value3"],
-            #     "col2":["value1", "value2", "value3"]
+            #     "numerical_col" : {
+            #       "SepalLengthCm" : [5.1, 6.1],
+            #       "SepalWidthCm": [2.5, 3.0]
+            #      },
+            #     "categorical_col" : {
+            #       "Species": ["Iris-setosta", "Iris-verginica"]
+            #      }
             # },
         search = request.json.get("search", None)
         if search:
-            for col, values in search.items():
+            # categorical columns
+            for col, values in search['categorical_col'].items():
                 temp_df = temp_df[temp_df[col].isin(values)]
 
-
+            # numerical columns
+            for col, values in search['numerical_col'].items():
+                temp_df = temp_df[temp_df[col].between(float(values[0]), float(values[1]))]
+                
         # 2. SORTING
             # "sort": {
             #     "col1": "True",
