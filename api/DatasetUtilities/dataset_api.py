@@ -8,6 +8,7 @@ from flask import (
 )
 from models.user_model import Users
 from utilities.methods import ( 
+    check_dataset_copy_exists,
     get_dataset_name, 
     get_parquet_dataset_file_name, 
     get_user_directory,
@@ -469,4 +470,71 @@ def get_numerical_columns_info():
             err = "Error in fetching the Numerical Columns List"
         return respond(error=err)
     
-    
+
+# Api to save the current dataset copy as the new dataset
+@datasetAPI.route("/save-as-new-dataset", methods=["POST"])
+@jwt_required()
+def save_as_new_dataset():
+    """
+        TAKES dataset name as input
+        PERFORMS save the functionality of deleting the current dataset and renaming the copy dataset as new dataset
+        RETURNS the success message as response
+    """
+    err = None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+        
+        # check if copy exits
+        if not check_dataset_copy_exists(dataset_name, user.id, user.email):
+            err = "Copy of the dataset does not exists"
+            raise
+        else:
+
+            directory = get_user_directory(user.email)
+
+            # delete the current dataset
+            dataset_name = get_dataset_name(user.id, dataset_name)
+
+            # Check if you have the directory for the user
+            Path(directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
+
+            # Check if the dataset already exists
+            dataset_file = get_parquet_dataset_file_name(dataset_name, user.email)
+            if not Path(dataset_file).is_file():
+                err = "This original dataset does not exists"
+                raise
+            
+            # Delete the dataset
+            Path(dataset_file).unlink()
+            
+            # rename the copy dataset as new dataset
+            copy_dataset_name = dataset_name + "_copy"
+
+            copy_dataset_file = get_parquet_dataset_file_name(copy_dataset_name, user.email)
+
+            os.rename(copy_dataset_file, dataset_file) # dataset_file is the og dataset file
+
+            res = {
+                "msg":"Dataset saved successfully"
+            }
+
+            return respond(data=res)
+
+    except Exception as e:
+        log_error(err_msg="Error in saving the dataset as new dataset", error=err, exception=e)
+        if not err:
+            err = "Error in saving the dataset as new dataset"
+        return respond(error=err)
