@@ -92,7 +92,7 @@ def check_dataset_copy_exists(dataset_name, user_id, user_email):
         app.logger.error("Error in checking the dataset copy exists")
         raise Exception(e)
 
-def get_dataset_copy(dataset_name, user_id, user_email):
+def load_dataset_copy(dataset_name, user_id, user_email):
     try:
         dataset_name = get_dataset_name(user_id, dataset_name) # dataset_name = iris_1
         dataset_name = dataset_name + "_copy" # dataset_name = iris_1_copy
@@ -108,6 +108,22 @@ def get_dataset_copy(dataset_name, user_id, user_email):
         app.logger.error("Error in getting the dataset copy")
         raise Exception(e)
 
+def delete_dataset_copy(dataset_name, user_id, user_email):
+    try:
+        dataset_name = get_dataset_name(user_id, dataset_name) # dataset_name = iris_1
+        dataset_name = dataset_name + "_copy" # dataset_name = iris_1_copy
+        dataset_file_copy = get_parquet_dataset_file_name(dataset_name, user_email)
+
+        if Path(dataset_file_copy).is_file():
+            Path(dataset_file_copy).unlink()
+            return None
+        else:
+            err = "Dataset copy does not exists"
+            return err
+    except Exception as e:
+        app.logger.error("Error in deleting the dataset copy")
+        raise Exception(e)
+    
 # =========================OLDER UNNECESSARY CODE=========================
 def get_dataset(dataset_name, db):
     try:

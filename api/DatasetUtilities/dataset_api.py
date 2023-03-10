@@ -472,9 +472,9 @@ def get_numerical_columns_info():
     
 
 # Api to save the current dataset copy as the new dataset
-@datasetAPI.route("/save-as-new-dataset", methods=["POST"])
+@datasetAPI.route("/save-changes", methods=["POST"])
 @jwt_required()
-def save_as_new_dataset():
+def save_changes():
     """
         TAKES dataset name as input
         PERFORMS save the functionality of deleting the current dataset and renaming the copy dataset as new dataset
@@ -537,4 +537,47 @@ def save_as_new_dataset():
         log_error(err_msg="Error in saving the dataset as new dataset", error=err, exception=e)
         if not err:
             err = "Error in saving the dataset as new dataset"
+        return respond(error=err)
+
+
+@datasetAPI.route("/revert-changes", methods=["POST"])
+@jwt_required()
+def revert_changes():
+    """
+    """
+    err=None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        dataset_name = get_dataset_name(user.id, dataset_name) # dataset_name = iris_1
+        dataset_name = dataset_name + "_copy" # dataset_name = iris_1_copy
+        dataset_file_copy = get_parquet_dataset_file_name(dataset_name, user.email)
+
+        if Path(dataset_file_copy).is_file():
+            Path(dataset_file_copy).unlink()
+        else:
+            err = "Dataset copy does not exists"
+            raise
+        
+        res = {
+            "msg":"Dataset copy deleted successfully"
+        }
+        return respond(data=res)
+    except Exception as e:
+        log_error(err_msg="Error in reverting the changes", error=err, exception=e)
+        if not err:
+            err = "Error in reverting the changes"
         return respond(error=err)

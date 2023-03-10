@@ -7,7 +7,7 @@ from flask import current_app as app
 
 # UTILITIES
 from utilities.respond import respond
-from utilities.methods import get_dataset_copy, load_dataset, log_error, make_dataset_copy, check_dataset_copy_exists, save_dataset_copy
+from utilities.methods import load_dataset_copy, load_dataset, log_error, make_dataset_copy, check_dataset_copy_exists, save_dataset_copy
 
 # MODELS
 from models.user_model import Users
@@ -65,7 +65,9 @@ def rename_column():
             app.logger.info("Dataset copy of %s does not exist. Making a copy of the dataset", dataset_name)
             make_dataset_copy(dataset_name, user.id, user.email)
     
-        df, err = get_dataset_copy(dataset_name, user.id, user.email)
+        df, err = load_dataset_copy(dataset_name, user.id, user.email)
+        if err:
+            raise
 
         df.rename(columns=col_name_change_info, inplace=True)
 
