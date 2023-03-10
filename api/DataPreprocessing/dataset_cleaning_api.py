@@ -19,6 +19,8 @@ import json
 dataCleaningAPI = Blueprint("dataCleaningAPI", __name__)
 dataCleaningAPI_restful = Api(dataCleaningAPI)
 
+
+# Api to rename column names
 @dataCleaningAPI.route("/rename-column", methods=["POST"])
 @jwt_required()
 def rename_column():
@@ -78,4 +80,47 @@ def rename_column():
         log_error(err_msg="Error in renaming the columns", error=err, exception=e)
         if not err:
             err = "Error in renaming the columns"
+        return respond(error=err)
+
+
+# Api to find and replace
+@dataCleaningAPI.route("/find-and-replace", methods=["POST"])
+@jwt_required()
+def find_and_replace():
+    """
+        TAKES dataset_name, column_name, find_value, replace_value as input 
+        PERFOMS find and replace operation on the given column
+        RETURNS the updated dataset as response
+    """
+    err=None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        '''
+         Request body:{
+            "dataset_name": "dataset_name",
+            "find_relace_info": {
+                "column_name_1": "new_name_1",
+                "column_name_2": "new_name_2",
+            }
+         }
+        '''
+        #df['column name'] = df['column name'].replace(['1st old value', '2nd old value', ...], ['1st new value', '2nd new value', ...])
+    except Exception as e:
+        log_error(err_msg="Error in find and replace", error=err, exception=e)
+        if not err:
+            err = "Error in find and replace"
         return respond(error=err)
