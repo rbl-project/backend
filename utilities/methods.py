@@ -21,6 +21,10 @@ def get_parquet_dataset_file_name(dataset_name, user_email):
     dataset_file = app.config['UPLOAD_FOLDER'] + f'/{user_email}/{dataset_name}.parquet'
     return dataset_file
 
+def get_metadata_file_name(dataset_name, user_email):
+    metadata_file = app.config['UPLOAD_FOLDER'] + f'/{user_email}/{dataset_name}_metadata.json'
+    return metadata_file
+
 def get_home_directory():
     home_directory = Path.home()
     return home_directory

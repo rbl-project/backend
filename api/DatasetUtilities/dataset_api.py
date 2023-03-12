@@ -11,10 +11,12 @@ from utilities.methods import (
     check_dataset_copy_exists,
     get_dataset_name, 
     get_parquet_dataset_file_name, 
+    get_metadata_file_name,
     get_user_directory,
     load_dataset,
     log_error
 )
+import json
 from utilities.respond import respond
 from flask_restful import  Api
 import pandas as pd
@@ -68,6 +70,36 @@ def upload_dataset():
         # Read the csv and convert it into parquet
         df = pd.read_csv(dataset)
         df.to_parquet(dataset_file, compression="snappy", index=True)
+        
+        # ======== Dataset MetaData ==========
+        dataset_file_name = dataset_name  # Name of parquet file saved in the directory 
+        _dataset_name, dataset_extension = dataset.filename.split(".") # Name of the dataset file and extension (Original)
+        n_rows,n_columns = df.shape # Number of rows in the dataset
+        n_values = n_rows * n_columns # Number of values in the dataset
+        column_list = list(df.columns) # List of columns in the dataset
+        column_datatypes = df.dtypes.astype(str).to_dict() # Dictionary of column name and its type
+        numerical_column_list = df.select_dtypes(exclude=['object', 'bool']).columns.tolist() # List of numerical columns
+        categorical_column_list = df.select_dtypes(include=['object', 'bool']).columns.tolist() # List of categorical columns
+        missing_values = {col:None for col in column_list} # Dictionary of column name and its missing values
+        
+        meta_data = {
+            "dataset_name":_dataset_name,
+            "dataset_extension":dataset_extension,
+            "dataset_file_name":dataset_file_name,
+            "n_rows":n_rows,
+            "n_columns":n_columns,
+            "n_values":n_values,
+            "column_list":column_list,
+            "column_datatypes":column_datatypes,
+            "numerical_column_list":numerical_column_list,
+            "categorical_column_list":categorical_column_list,
+            "missing_values":missing_values
+        }
+            
+        # Save the meta_data in json file
+        with open(get_metadata_file_name(dataset_name,user.email), 'w') as f:
+            json.dump(meta_data, f)
+            
 
         user.db_count = user.db_count + 1
         user.save()

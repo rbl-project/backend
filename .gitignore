@@ -21,3 +21,4 @@ migrations/
 *.parquet
 *.ipynb
 *.csv
+*.json
