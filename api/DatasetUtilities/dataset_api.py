@@ -299,7 +299,7 @@ def get_datasets():
 # Api to get the categorical columns of the dataset
 @datasetAPI.route("/get-columns-info", methods=["POST"])
 @jwt_required()
-def get_columns_info():
+def get_all_columns_info():
     """
         TAKES dataset name as input
         PERFORMS fetch the categorical columns of the dataset
@@ -347,21 +347,28 @@ def get_columns_info():
         rows = df.shape[0]
         columns = df.shape[1]
 
+        # datatypes of all the columns
+        temp_dtypes = df.dtypes.to_dict()
+        dtypes = {}
+        for key, value in temp_dtypes.items():
+            dtypes[key]=str(value)
+
         res = {
             "categorical_columns":final_categorical_columns,
             "numerical_columns":numerical_columns,
             "categorical_values": values,
             "all_columns":all_columns,
             "n_rows":rows,
-            "n_columns":columns
+            "n_columns":columns,
+            "dtypes":dtypes
         }
 
         return respond(data=res)
     
     except Exception as e:
-        log_error(err_msg="Error in fetching the categorical Columns List", error=err, exception=e)
+        log_error(err_msg="Error in fetching the all columns info", error=err, exception=e)
         if not err:
-            err = "Error in fetching the categorical Columns List"
+            err = "Error in fetching the all columns info"
         return respond(error=err)
 
 
@@ -531,6 +538,8 @@ def save_changes():
                 "msg":"Dataset saved successfully"
             }
 
+            app.logger.info("Saved the changes in %s dataset", dataset_name)
+
             return respond(data=res)
 
     except Exception as e:
@@ -575,7 +584,10 @@ def revert_changes():
         res = {
             "msg":"Dataset copy deleted successfully"
         }
+
+        app.logger.info("Reverted the changes in %s dataset", dataset_name)
         return respond(data=res)
+    
     except Exception as e:
         log_error(err_msg="Error in reverting the changes", error=err, exception=e)
         if not err:

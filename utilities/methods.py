@@ -50,6 +50,7 @@ def save_dataset_copy(df, dataset_name, user_id, user_email):
         dataset_name = get_dataset_name(user_id, dataset_name)
         dataset_name = dataset_name + "_copy"
         dataset_file = get_parquet_dataset_file_name(dataset_name, user_email)
+        # print(df.dtypes)
         df.to_parquet(dataset_file, compression="snappy", index=False)
         return None
     except Exception as e:
