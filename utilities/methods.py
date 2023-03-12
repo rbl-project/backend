@@ -5,6 +5,7 @@ from sqlalchemy import text
 import pandas as pd
 from flask import current_app as app
 from pathlib import Path
+import json
 
 def is_email_valid(email):
     regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
@@ -23,6 +24,10 @@ def get_parquet_dataset_file_name(dataset_name, user_email):
 
 def get_metadata_file_name(dataset_name, user_id, user_email):
     metadata_file = app.config['UPLOAD_FOLDER'] + f'/{user_email}/{dataset_name}_{user_id}_metadata.json'
+    return metadata_file
+
+def get_dataset_copy_metadata_file_name(dataset_name, user_id, user_email):
+    metadata_file = app.config['UPLOAD_FOLDER'] + f'/{user_email}/{dataset_name}_{user_id}_copy_metadata.json'
     return metadata_file
 
 def get_home_directory():
@@ -60,9 +65,42 @@ def save_dataset_copy(df, dataset_name, user_id, user_email):
         app.logger.error("Error in saving the dataset copy")
         raise Exception(e)
 
+def load_metadata(dataset_name, user_id, user_email):
+    try:
+        metadata_file = get_metadata_file_name(dataset_name, user_id, user_email)
+        if not Path(metadata_file).is_file():
+            err = "This dataset does not exists"
+            return None, err
+
+        metadata = {}
+        with open(metadata_file, 'r') as f:
+            metadata = json.load(f)
+            
+        return metadata, None
+
+    except Exception as e:
+        app.logger.error("Error in loading the metadata")
+        raise Exception(e)
+
+def load_metadata_copy(dataset_name, user_id, user_email):
+    try:
+        metadata_file = get_dataset_copy_metadata_file_name(dataset_name, user_id, user_email)
+        if not Path(metadata_file).is_file():
+            err = "This File does not exists"
+            return None, err
+
+        metadata = {}
+        with open(metadata_file, 'r') as f:
+            metadata = json.load(f)
+            
+        return metadata, None
+
+    except Exception as e:
+        app.logger.error("Error in loading the metadata copy")
+        raise Exception(e)
+        
 def log_error(err_msg = None, error=None, exception=None):
     app.logger.error("%s. Error=> %s. Exception=> %s",err_msg, error, str(exception))
-
 
 def make_dataset_copy(dataset_name, user_id, user_email):
     try:
@@ -76,6 +114,15 @@ def make_dataset_copy(dataset_name, user_id, user_email):
         dataset_file_copy = get_parquet_dataset_file_name(dataset_name, user_email)
 
         df.to_parquet(dataset_file_copy, compression="snappy", index=False)
+        
+        # Generate metadata for the dataset copy
+        metadata, err = load_metadata(dataset_name, user_id, user_email)
+        if err:
+            app.logger.error("Error in making the dataset copy. Error: %s", err)
+            return err
+        with open(get_dataset_copy_metadata_file_name(dataset_name, user_id, user_email), 'w') as f:
+            json.dump(metadata, f)
+        
         app.logger.info("Dataset copy %s created successfully", dataset_name)
         return None
     
@@ -115,16 +162,26 @@ def load_dataset_copy(dataset_name, user_id, user_email):
 
 def delete_dataset_copy(dataset_name, user_id, user_email):
     try:
+        err = None
+        
         dataset_name = get_dataset_name(user_id, dataset_name) # dataset_name = iris_1
         dataset_name = dataset_name + "_copy" # dataset_name = iris_1_copy
         dataset_file_copy = get_parquet_dataset_file_name(dataset_name, user_email)
 
         if Path(dataset_file_copy).is_file():
             Path(dataset_file_copy).unlink()
-            return None
         else:
             err = "Dataset copy does not exists"
-            return err
+        
+        # Delete metadata for the dataset copy
+        metadata_file = get_dataset_copy_metadata_file_name(dataset_name, user_id, user_email)
+        if Path(metadata_file).is_file():
+            Path(metadata_file).unlink()
+        else:
+            err = "Dataset copy metadata does not exists"
+        
+        return err
+        
     except Exception as e:
         app.logger.error("Error in deleting the dataset copy")
         raise Exception(e)

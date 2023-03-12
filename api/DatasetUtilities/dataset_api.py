@@ -101,7 +101,6 @@ def upload_dataset():
         with open(get_metadata_file_name(_dataset_name,user.id,user.email), 'w') as f:
             json.dump(meta_data, f)
             
-
         user.db_count = user.db_count + 1
         user.save()
 
@@ -157,15 +156,12 @@ def delete_dataset():
         
         # Delete the dataset
         Path(dataset_file).unlink()
-
         user.db_count = user.db_count - 1
         user.save()
         
         # Check if the metadata file exists and delete it
         metadata_file = get_metadata_file_name(dataset_name,user.id,user.email)
-        print("Metadata file",metadata_file)
         if Path(metadata_file).is_file():
-            print("Metadata file exists",metadata_file)
             Path(metadata_file).unlink()
             # err = "This dataset does not exists"
             # raise

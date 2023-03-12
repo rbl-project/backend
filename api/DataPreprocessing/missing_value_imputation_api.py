@@ -8,7 +8,7 @@ from flask import current_app as app
 
 # UTILITIES
 from utilities.respond import respond
-from utilities.methods import load_dataset_copy, load_dataset, log_error, make_dataset_copy, check_dataset_copy_exists, save_dataset_copy, get_metadata_file_name
+from utilities.methods import load_dataset_copy, load_dataset, log_error, make_dataset_copy, check_dataset_copy_exists, save_dataset_copy, get_metadata_file_name, load_metadata, load_metadata_copy, get_dataset_copy_metadata_file_name, get_dataset_name, get_parquet_dataset_file_name
 
 # MODELS
 from models.user_model import Users
@@ -45,25 +45,24 @@ def get_missing_value_percentage():
         if not dataset_name:
             err = "Dataset name is required"
             raise
-        
-        # Get the column wise and all columns missing value from metadata file
-        column_wise_missing_value = {}
-        all_columns_missing_value = {}
-        metadata_file = get_metadata_file_name(dataset_name, user.id, user.email)
-        with open(metadata_file) as f:
-            metadata = json.load(f)
-            column_wise_missing_value = metadata["column_wise_missing_value"]
-            all_columns_missing_value = metadata["all_columns_missing_value"]
-            
-        
+                
         df = None
+        metadata = {}
         err = None
         # Look if the copy of dataset exists and if it does, load dataset copy otherwise load the original dataset
         if check_dataset_copy_exists(dataset_name, user.id, user.email):
             df,err = load_dataset_copy(dataset_name, user.id, user.email)
+            metadata,err = load_metadata_copy(dataset_name, user.id, user.email)
         else:
             df,err = load_dataset(dataset_name, user.id, user.email)
-            
+            metadata,err = load_metadata(dataset_name, user.id, user.email)
+        
+        if err:
+            raise 
+        
+        # Get the column wise and all columns missing value from metadata file    
+        column_wise_missing_value = metadata["column_wise_missing_value"]
+        all_columns_missing_value = metadata["all_columns_missing_value"]
         
             
         # ================================== Main Logic Start HERE ==================================
