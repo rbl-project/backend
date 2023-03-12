@@ -148,7 +148,7 @@ def delete_dataset():
         # Check if you have the directory for the user
         Path(directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
 
-        # Check if the dataset already exists
+        # Check if the dataset does not exists
         dataset_file = get_parquet_dataset_file_name(dataset_name, user.email)
         if not Path(dataset_file).is_file():
             err = "This dataset does not exists"
@@ -159,6 +159,14 @@ def delete_dataset():
 
         user.db_count = user.db_count - 1
         user.save()
+        
+        # Check if the metadata file exists and delete it
+        metadata_file = get_metadata_file_name(dataset_name,user.email)
+        if Path(metadata_file).is_file():
+            Path(metadata_file).unlink()
+            # err = "This dataset does not exists"
+            # raise
+    
 
         res = {
             "msg":"Dataset Deleted Successfully"
@@ -294,7 +302,8 @@ def get_datasets():
         user_directory = get_user_directory(user.email)
         Path(user_directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
 
-        all_datasets_list = os.listdir(user_directory)
+        # Select only the parquet files
+        all_datasets_list = [f for f in os.listdir(user_directory) if f.endswith(".parquet")]
         all_datasets_dict = []
         for dataset in all_datasets_list:
             name = dataset.split(".")[0] # remove the .parquet extension
