@@ -64,7 +64,8 @@ def make_dataset_copy(dataset_name, user_id, user_email):
     try:
         df, err = load_dataset(dataset_name, user_id, user_email)
         if err:
-            raise Exception(err)
+            app.logger.error("Error in making the dataset copy. Error: %s", err)
+            return err
         
         dataset_name = get_dataset_name(user_id, dataset_name) # dataset_name = iris_1
         dataset_name = dataset_name + "_copy" # dataset_name = iris_1_copy
