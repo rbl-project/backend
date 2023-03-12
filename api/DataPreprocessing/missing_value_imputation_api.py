@@ -8,7 +8,7 @@ from flask import current_app as app
 
 # UTILITIES
 from utilities.respond import respond
-from utilities.methods import load_dataset_copy, load_dataset, log_error, make_dataset_copy, check_dataset_copy_exists, save_dataset_copy
+from utilities.methods import load_dataset_copy, load_dataset, log_error, make_dataset_copy, check_dataset_copy_exists, save_dataset_copy, get_metadata_file_name
 
 # MODELS
 from models.user_model import Users
@@ -45,19 +45,17 @@ def get_missing_value_percentage():
         if not dataset_name:
             err = "Dataset name is required"
             raise
-        app.logger.info("Dataset name: {}".format(dataset_name))
         
-        column_wise_missing_value_type = request.json.get("column_wise_missing_value_type")
-        if not column_wise_missing_value_type:
-            err = "Column wise Missing value type is required"
-            raise
+        # Get the column wise and all columns missing value from metadata file
+        column_wise_missing_value = {}
+        all_columns_missing_value = {}
+        metadata_file = get_metadata_file_name(dataset_name, user.id, user.email)
+        with open(metadata_file) as f:
+            metadata = json.load(f)
+            column_wise_missing_value = metadata["column_wise_missing_value"]
+            all_columns_missing_value = metadata["all_columns_missing_value"]
+            
         
-        
-        all_columns_missing_value_type = request.json.get("all_columns_missing_value_type")
-        if not all_columns_missing_value_type:
-            err = "All columns Missing value type is required"
-            raise
-
         df = None
         err = None
         # Look if the copy of dataset exists and if it does, load dataset copy otherwise load the original dataset
@@ -74,33 +72,33 @@ def get_missing_value_percentage():
         cols = df.columns.tolist()
         column_wise_missing_value_data = []
         for col in cols:
-            missing_percentage = round(df[col].eq(column_wise_missing_value_type[col]["missing_value"]).sum()/len(df[col]) * 100, 2)
+            missing_percentage = round(df[col].eq(column_wise_missing_value[col]).sum()/len(df[col]) * 100, 2)
             non_missing_percentage = 100 - missing_percentage
             column_wise_missing_value_data.append({
                 "column_name": col, 
                 "missing_value_percentage": missing_percentage, 
                 "correct_value_percentage": non_missing_percentage,
-                "missing_value_type": column_wise_missing_value_type[col]["missing_value"]
+                "missing_value_type": column_wise_missing_value[col]
             })
         
         # Sort the column wise missing value data in descending order of missing value percentage
         column_wise_missing_value_data.sort(key=lambda x: x["missing_value_percentage"], reverse=True)
         
         # Get the total percentage of missing values in the dataset
-        total_missing_value_percentage = round(df.eq(all_columns_missing_value_type["missing_value"]).sum().sum()/df.size * 100, 2)
-        total_non_missing_value_percentage = 100 - total_missing_value_percentage
-        total_missing_value_data = {
+        all_columns_missing_value_percentage = round(df.eq(all_columns_missing_value).sum().sum()/df.size * 100, 2)
+        all_columns_non_missing_value_percentage = 100 - all_columns_missing_value_percentage
+        all_columns_missing_value_data = {
             "column_name": "all_columns",
-            "missing_value_percentage": total_missing_value_percentage,
-            "correct_value_percentage": total_non_missing_value_percentage,
-            "missing_value_type": all_columns_missing_value_type["missing_value"]
+            "missing_value_percentage": all_columns_missing_value_percentage,
+            "correct_value_percentage": all_columns_non_missing_value_percentage,
+            "missing_value_type": all_columns_missing_value
         }
         
         # ================================ Main Logic Ends HERE =================================
         
         res = {
             "column_wise_missing_value_data": column_wise_missing_value_data,
-            "total_missing_value_data": total_missing_value_data,
+            "all_columns_missing_value_data": all_columns_missing_value_data,
         }   
         
         return respond(data=res)

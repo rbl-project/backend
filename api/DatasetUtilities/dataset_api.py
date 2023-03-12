@@ -80,7 +80,7 @@ def upload_dataset():
         column_datatypes = df.dtypes.astype(str).to_dict() # Dictionary of column name and its type
         numerical_column_list = df.select_dtypes(exclude=['object', 'bool']).columns.tolist() # List of numerical columns
         categorical_column_list = df.select_dtypes(include=['object', 'bool']).columns.tolist() # List of categorical columns
-        missing_values = {col:None for col in column_list} # Dictionary of column name and its missing values
+        column_wise_missing_value = {col:None for col in column_list} # Dictionary of column name and its missing value
         
         meta_data = {
             "dataset_name":_dataset_name,
@@ -93,11 +93,12 @@ def upload_dataset():
             "column_datatypes":column_datatypes,
             "numerical_column_list":numerical_column_list,
             "categorical_column_list":categorical_column_list,
-            "missing_values":missing_values
+            "column_wise_missing_value":column_wise_missing_value,
+            "all_columns_missing_value": None,
         }
             
         # Save the meta_data in json file
-        with open(get_metadata_file_name(dataset_name,user.email), 'w') as f:
+        with open(get_metadata_file_name(_dataset_name,user.id,user.email), 'w') as f:
             json.dump(meta_data, f)
             
 
@@ -143,13 +144,13 @@ def delete_dataset():
             raise
 
         # dataset_name = f'{dataset_name.split(".")[0]}_{user.id}'
-        dataset_name = get_dataset_name(user.id, dataset_name)
+        dataset_file_name = get_dataset_name(user.id, dataset_name)
 
         # Check if you have the directory for the user
         Path(directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
 
         # Check if the dataset does not exists
-        dataset_file = get_parquet_dataset_file_name(dataset_name, user.email)
+        dataset_file = get_parquet_dataset_file_name(dataset_file_name, user.email)
         if not Path(dataset_file).is_file():
             err = "This dataset does not exists"
             raise
@@ -161,8 +162,10 @@ def delete_dataset():
         user.save()
         
         # Check if the metadata file exists and delete it
-        metadata_file = get_metadata_file_name(dataset_name,user.email)
+        metadata_file = get_metadata_file_name(dataset_name,user.id,user.email)
+        print("Metadata file",metadata_file)
         if Path(metadata_file).is_file():
+            print("Metadata file exists",metadata_file)
             Path(metadata_file).unlink()
             # err = "This dataset does not exists"
             # raise
