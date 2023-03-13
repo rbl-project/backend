@@ -22,6 +22,167 @@ dataCleaningAPI = Blueprint("dataCleaningAPI", __name__)
 dataCleaningAPI_restful = Api(dataCleaningAPI)
 
 
+# Api to drop rows by categorical column values
+@dataCleaningAPI.route("/drop-by-column-value", methods=["POST"])
+@jwt_required()
+def drop_by_column_value():
+    """
+        TAKES dataset name and column name and column value as input
+        DROPS the rows with the given column value in the given dataset
+        RETURNS the success as response
+    """
+    err = None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        '''
+            Request body:{
+                "dataset_name": "iris_1",
+                "col_value_info": {
+                    "col_name_1": ["value_1", "value_2"],
+                    "col_name_2": ["value_1", "value_2"]
+                }
+            }
+        '''
+        col_value_info = request.json.get("col_value_info")
+        if not col_value_info:
+            err = "Column value info is required"
+            raise
+
+        # Load the dataset
+        # Look if the copy of dataset exists and if it does, then rename the columns in that copy otherwise rename make a copy and rename the columns in that copy
+        if not check_dataset_copy_exists(dataset_name, user.id, user.email):
+            app.logger.info("Dataset copy of %s does not exist. Trying to make a copy of the dataset", dataset_name)
+            err = make_dataset_copy(dataset_name, user.id, user.email)
+            if err:
+                raise
+    
+        df, err = load_dataset_copy(dataset_name, user.id, user.email)
+        if err:
+            raise
+        
+        # ================== Business Logic Start ==================
+
+        # Check if the column name is valid
+        for col_name in col_value_info:
+            if col_name not in df.columns:
+                err = "Column name {} is not valid".format(col_name)
+                raise
+        
+        # Drop the rows with the given column value
+        for col_name in col_value_info:
+            df = df[~df[col_name].isin(col_value_info[col_name])]
+
+        # ================== Business Logic End ==================
+        
+        save_dataset_copy(df, dataset_name, user.id, user.email)
+
+        res = {
+            "msg": "Rows dropped by column value"
+        }
+        return respond(data=res)
+    
+    except Exception as e:
+        log_error(err_msg="Error in dropping the rows by columns values", error=err, exception=e)
+        if not err:
+            err = "Error in dropping the rows by columns values"
+        return respond(error=err)
+
+
+# Api to drop rows by numerical column values and range
+@dataCleaningAPI.route("/drop-by-numerical-value", methods=["POST"])
+@jwt_required()
+def drop_by_numerical_value():
+    """
+        TAKES dataset name and column name and numerical column value as input
+        PERFORMS the given operation on the given column
+        RETURNS the success as response
+    """
+    err=None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        '''
+            Request body:{
+                "dataset_name": "iris_1",
+                "col_value_info": {
+                    "col_name_1": [from_value_1, to_value_1],
+                    "col_name_2": [from_value_2, to_value_2]
+                }
+            }
+        '''
+
+        col_value_info = request.json.get("col_value_info")
+        if not col_value_info:
+            err = "Column value info is required"
+            raise
+
+        # Load the dataset
+        # Look if the copy of dataset exists and if it does, then rename the columns in that copy otherwise rename make a copy and rename the columns in that copy
+        if not check_dataset_copy_exists(dataset_name, user.id, user.email):
+            app.logger.info("Dataset copy of %s does not exist. Trying to make a copy of the dataset", dataset_name)
+            err = make_dataset_copy(dataset_name, user.id, user.email)
+            if err:
+                raise
+    
+        df, err = load_dataset_copy(dataset_name, user.id, user.email)
+        if err:
+            raise
+
+        # ================== Business Logic Start ==================
+
+        # Check if the column name is valid
+        for col_name in col_value_info:
+            if col_name not in df.columns:
+                err = "Column name {} is not valid".format(col_name)
+                raise
+        
+        # Drop the rows with the given numerical column range
+        for col_name in col_value_info:
+            df = df[(df[col_name] < col_value_info[col_name][0]) | (df[col_name] > col_value_info[col_name][1])]
+        
+        # ================== Business Logic End ==================
+
+        save_dataset_copy(df, dataset_name, user.id, user.email)
+
+        res = {
+            "msg": "Rows dropped by numerical value"
+        }
+        return respond(data=res)
+
+    except Exception as e:
+        log_error(err_msg="Error in dropping the rows by numerical values", error=err, exception=e)
+        if not err:
+            err = "Error in dropping the rows by numerical values"
+        return respond(error=err)
+
+
 # Api to drop rows by index
 @dataCleaningAPI.route("/drop-by-row-index", methods=["POST"])
 @jwt_required()
@@ -29,7 +190,7 @@ def drop_by_row_index():
     """
         TAKES dataset name and row_start and row_end index as input
         DROPS the given row in the given dataset
-        RETURNS the updated dataset as response
+        RETURNS the success as response
     """
     err = None
     try:

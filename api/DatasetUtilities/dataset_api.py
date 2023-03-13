@@ -331,15 +331,22 @@ def get_all_columns_info():
 
         # get the categorical columns
         categorical_columns = df.select_dtypes(include=['object', 'bool']).columns.tolist()
+        
+        #todo: Give all the categorical values in the response and give top 100 unique values in the frontend. As soon as someone types something we give next top 100
+        values = {}
+        for column in categorical_columns:
+            values[column] = df[column].unique().tolist()[0:100]
 
         # get the unique values of categorical column which have less than 100 unique values
+        '''
         values = {}
         final_categorical_columns = []
         for column in categorical_columns:
             if len(df[column].unique()) <= 100:
                 final_categorical_columns.append(column)
                 values[column] = df[column].unique().tolist()
-
+        '''
+        
         # get the numerical columns
         numerical_columns = df.select_dtypes(exclude=['object', 'bool']).columns.tolist()
 
@@ -354,7 +361,8 @@ def get_all_columns_info():
             dtypes[key]=str(value)
 
         res = {
-            "categorical_columns":final_categorical_columns,
+            # "categorical_columns":final_categorical_columns,
+            "categorical_columns":categorical_columns,
             "numerical_columns":numerical_columns,
             "categorical_values": values,
             "all_columns":all_columns,
@@ -593,3 +601,75 @@ def revert_changes():
         if not err:
             err = "Error in reverting the changes"
         return respond(error=err)
+
+
+# Api to search the for a specific value in the dataset using the pattern matching
+@datasetAPI.route("/search-categorical-value", methods=["POST"])
+@jwt_required()
+def search_categorical_value():
+    """
+        NEED API TRHOTELLING FOR THIS API : https://www.section.io/engineering-education/implementing-rate-limiting-in-flask/
+    """
+    err=None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        '''
+            Request Body : {
+                "dataset_name":"iris",
+                "column_name":"sepal_length",
+                "search_value":"5.1"
+            }
+        '''
+
+        column_name = request.json.get("column_name")
+        if not column_name:
+            err = "Column name is required"
+            raise
+
+        search_value = request.json.get("search_value")
+        if not search_value:
+            err = "Search value is required"
+            raise
+        
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
+            raise
+        
+        # print(dataset_name, column_name, search_value)
+        # fetch the categorical columns
+        categorical_columns = df.select_dtypes(include=['object', 'bool']).columns.tolist()
+        if column_name not in categorical_columns:
+            err = "Column is not a categorical column"
+            raise
+
+        # check if the value is present in the column and if yes then return the values
+        values = []
+        values = df[df[column_name].str.contains(f'^{search_value}.*')][column_name].unique().tolist()
+     
+        res = {
+            "search_result":values
+        }
+
+        return respond(data=res)
+    
+    except Exception as e:
+        # log_error(err_msg="Error in searching the categorical value. Sending empty list", error=err, exception=e)
+        # NO NEED TO RAISE EXCEPTION HERE AS IT IS NOT A REGULAR API
+        res = {
+            "search_result":[]
+        }
+        return respond(data=res)
