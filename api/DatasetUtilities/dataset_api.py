@@ -266,7 +266,11 @@ def get_datasets():
         all_datasets_dict = []
         for dataset in all_datasets_list:
             name = dataset.split(".")[0] # remove the .parquet extension
-            name = "_".join(name.split("_")[:-1]) # remove the user id
+            # split current name and check if there is word "copy" in it at the end
+            name_split = name.split("_")
+            if name_split[-1] == "copy":
+                continue
+            name = "_".join(name_split[:-1]) # remove the user id
             temp = {
                 "name":name,
                 "modified": datetime.fromtimestamp(os.path.getmtime(os.path.join(user_directory, dataset))).strftime('%d %b, %Y %H:%M:%S'),
@@ -514,7 +518,7 @@ def save_changes():
         
         # check if copy exits
         if not check_dataset_copy_exists(dataset_name, user.id, user.email):
-            err = "Copy of the dataset does not exists"
+            err = "No cahnges to save"
             raise
         else:
 
@@ -543,7 +547,7 @@ def save_changes():
             os.rename(copy_dataset_file, dataset_file) # dataset_file is the og dataset file
 
             res = {
-                "msg":"Dataset saved successfully"
+                "msg":"Dataset changes saved successfully"
             }
 
             app.logger.info("Saved the changes in %s dataset", dataset_name)
@@ -586,11 +590,11 @@ def revert_changes():
         if Path(dataset_file_copy).is_file():
             Path(dataset_file_copy).unlink()
         else:
-            err = "Dataset copy does not exists"
+            err = "No changes detected in the current dataset"
             raise
         
         res = {
-            "msg":"Dataset copy deleted successfully"
+            "msg":"Dataset changes reverted successfully"
         }
 
         app.logger.info("Reverted the changes in %s dataset", dataset_name)

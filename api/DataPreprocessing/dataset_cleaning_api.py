@@ -404,6 +404,8 @@ def rename_column():
         res = {
             "msg": "Column names changed successfully",
         }
+
+        app.logger.info("Column names changed successfully")
         return respond(data=res)
     
     except Exception as e:
