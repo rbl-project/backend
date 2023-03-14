@@ -491,7 +491,7 @@ def find_and_replace():
             replace_list = []
             for find_replace in find_replace_list:
                 find_list.append(find_replace["find"])
-                replace_list.append(find_replace["replace_value"])
+                replace_list.append(find_replace["replace"])
             df[column_name].replace(find_list, replace_list, inplace=True)
 
         # ================== Business Logic End ==================

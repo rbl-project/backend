@@ -518,7 +518,7 @@ def save_changes():
         
         # check if copy exits
         if not check_dataset_copy_exists(dataset_name, user.id, user.email):
-            err = "No cahnges to save"
+            err = "No changes to save"
             raise
         else:
 
@@ -663,7 +663,7 @@ def search_categorical_value():
         # check if the value is present in the column and if yes then return the values
         values = []
         values = df[df[column_name].str.contains(f'^{search_value}.*')][column_name].unique().tolist()
-     
+
         res = {
             "search_result":values
         }
