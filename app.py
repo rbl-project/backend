@@ -14,6 +14,7 @@ from models.jwt_blocklist_model import TokenBlocklist
 
 # Extensions
 from manage.db_setup import db
+from manage.mongodb_setup import db as mongo_db
 from manage.db_setup import migrate
 from manage.celery_setup import celery_instance
 from manage.jwt_extension import jwt
@@ -25,7 +26,7 @@ from api.DatasetUtilities import dataset_api
 from api.DataOverview import data_overview_api
 # from api.DataCleaning import data_cleaning_api
 from api.EDA import dataset_overview_api, data_correlation_api, graphs_api, tabular_representation_api
-from api.DataPreprocessing import dataset_cleaning_api
+from api.DataPreprocessing import dataset_cleaning_api, missing_value_imputation_api
 
 # Utility
 from utilities.respond import respond
@@ -141,12 +142,16 @@ def add_end_points(app):
     app.register_blueprint(dataset_api.datasetAPI, url_prefix = "/api")
     app.register_blueprint(data_visualization_api.dataVisulizationAPI, url_prefix = "/api")
     app.register_blueprint(data_overview_api.dataOverviewAPI, url_prefix = "/api")
-    # app.register_blueprint(data_cleaning_api.dataCleaningAPI, url_prefix = "/api")
+    
+    # Exploratory Data Analysis
     app.register_blueprint(dataset_overview_api.datasetOverviewAPI, url_prefix = "/api")
     app.register_blueprint(tabular_representation_api.tabularRepresentationAPI, url_prefix = "/api")
     app.register_blueprint(data_correlation_api.dataCorrelationAPI, url_prefix = "/api")
     app.register_blueprint(graphs_api.graphsAPI, url_prefix = "/api")
+    
+    # Data Preprocessing
     app.register_blueprint(dataset_cleaning_api.dataCleaningAPI, url_prefix = "/api")
+    app.register_blueprint(missing_value_imputation_api.missingValueImputationAPI, url_prefix = "/api")
     
 
 def configure_app(app):
@@ -159,6 +164,7 @@ def configure_app(app):
     app.config['MAX_CONTENT_LENGTH'] = ONE_GB 
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=2)
+    app.config['MONGODB_SETTINGS'] = { 'db': os.getenv("MONGODB_DATABASE_NAME"),'host': os.getenv("MONGODB_HOST"), 'port': int(os.getenv("MONGODB_PORT"))}
 
 def create_app():
     '''
@@ -173,7 +179,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-
+    mongo_db.init_app(app)
     # with app.app_context():
     #     db.create_all()
 
