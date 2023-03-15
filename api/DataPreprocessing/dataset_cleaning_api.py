@@ -212,12 +212,19 @@ def drop_by_row_index():
         '''
             Request body:{
                 "dataset_name": "iris_1",
-                "row_start": 0,
-                "row_end": 10
+                "row_drop_info": {
+                    "row_start": 0,
+                    "row_end": 10
+                }
             }
         '''
-        row_start = request.json.get("row_start")
-        row_end = request.json.get("row_end")
+        row_drop_info = request.json.get("row_drop_info")
+        if not row_drop_info:
+            err = "Row drop info is required"
+            raise
+
+        row_start = row_drop_info.get("row_start")
+        row_end = row_drop_info.get("row_end")
         if row_start is None or row_end is None:
             err = "Row start and row end are required"
             raise
@@ -296,10 +303,17 @@ def drop_by_column_name():
         '''
             Request body:{
                 "dataset_name": "dataset_name",
-                "col_list": ["col1", "col2", "col3"]
+                "col_list_info": {
+                    "col_list": ["sepal_length", "sepal_width"]
+                }
         '''
         
-        col_list = request.json.get("col_list")
+        col_list_info = request.json.get("col_list_info")
+        if not col_list_info:
+            err = "Column list info is required"
+            raise
+        
+        col_list = col_list_info.get("col_list")
         if not col_list:
             err = "Column list is required"
             raise

@@ -662,7 +662,7 @@ def search_categorical_value():
 
         # check if the value is present in the column and if yes then return the values
         values = []
-        values = df[df[column_name].str.contains(f'^{search_value}.*')][column_name].unique().tolist()
+        values = df[df[column_name].apply(str.lower).str.contains(f'^{search_value.lower()}.*')][column_name].unique().tolist()
 
         res = {
             "search_result":values
