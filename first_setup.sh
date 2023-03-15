@@ -78,6 +78,7 @@ sudo tee -a /etc/nginx/sites-available/rbl_backend <<EOF
 server {
 listen 80;
 server_name $ip_address;
+client_max_body_size 550M;
 
 location / {
   include proxy_params;
