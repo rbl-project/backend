@@ -608,7 +608,9 @@ def save_changes():
             # if Copy Metadata Exists then replace it in place of original metadata and delete the copy metadata
             if copy_metadata_obj:
                 og_metadata_obj = MetaData.objects(dataset_name=dataset_name).first()
-                og_metadata_obj.update(**copy_metadata_obj.to_mongo().to_dict())
+                copy_metadata_dict = copy_metadata_obj.to_mongo().to_dict()
+                del copy_metadata_dict["_id"]
+                og_metadata_obj.update(**copy_metadata_dict)
                 copy_metadata_obj.delete()
                 app.logger.info("Dataset '%s' metadata deleted successfully",str(dataset_name))
             else:
