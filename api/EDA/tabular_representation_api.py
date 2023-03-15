@@ -51,6 +51,8 @@ def tabular_representation():
         if err:
             raise
 
+        # ================== Business Logic Start ==================
+
         temp_df = df.copy()    
 
         # 1. SEARCHING 2. SORTING 3. FILTERING it haas to be in this order only
@@ -137,6 +139,8 @@ def tabular_representation():
             temp_df = temp_df.to_json(orient='split')
             temp_df = json.loads(temp_df)
             dataframe = temp_df
+
+        # ================== Business Logic End ==================
 
         res = {
             "dataframe": dataframe,

@@ -8,7 +8,7 @@ from models.user_model import Users
 from utilities.constants import DEFAULT_FILL_METHOD
 from utilities.methods import (
     load_dataset, 
-    save_dataset
+    save_dataset_copy
 )
 from utilities.respond import respond
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -89,7 +89,7 @@ def fill_missing_values():
             for i in df.columns:
                 df[i].fillna(df[i].median(), inplace=True)
         
-        save_dataset(df, dataset_name, user.id, user.email)
+        save_dataset_copy(df, dataset_name, user.id, user.email)
         
         return respond(data={"message": "Missing values filled successfully"}, code=200)
     

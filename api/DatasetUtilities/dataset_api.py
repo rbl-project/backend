@@ -8,6 +8,7 @@ from flask import (
 )
 from models.user_model import Users
 from utilities.methods import ( 
+    check_dataset_copy_exists,
     get_dataset_name, 
     get_parquet_dataset_file_name, 
     get_user_directory,
@@ -265,7 +266,11 @@ def get_datasets():
         all_datasets_dict = []
         for dataset in all_datasets_list:
             name = dataset.split(".")[0] # remove the .parquet extension
-            name = "_".join(name.split("_")[:-1]) # remove the user id
+            # split current name and check if there is word "copy" in it at the end
+            name_split = name.split("_")
+            if name_split[-1] == "copy":
+                continue
+            name = "_".join(name_split[:-1]) # remove the user id
             temp = {
                 "name":name,
                 "modified": datetime.fromtimestamp(os.path.getmtime(os.path.join(user_directory, dataset))).strftime('%d %b, %Y %H:%M:%S'),
@@ -298,7 +303,7 @@ def get_datasets():
 # Api to get the categorical columns of the dataset
 @datasetAPI.route("/get-columns-info", methods=["POST"])
 @jwt_required()
-def get_columns_info():
+def get_all_columns_info():
     """
         TAKES dataset name as input
         PERFORMS fetch the categorical columns of the dataset
@@ -330,15 +335,22 @@ def get_columns_info():
 
         # get the categorical columns
         categorical_columns = df.select_dtypes(include=['object', 'bool']).columns.tolist()
+        
+        #todo: Give all the categorical values in the response and give top 100 unique values in the frontend. As soon as someone types something we give next top 100
+        values = {}
+        for column in categorical_columns:
+            values[column] = df[column].unique().tolist()[0:100]
 
         # get the unique values of categorical column which have less than 100 unique values
+        '''
         values = {}
         final_categorical_columns = []
         for column in categorical_columns:
             if len(df[column].unique()) <= 100:
                 final_categorical_columns.append(column)
                 values[column] = df[column].unique().tolist()
-
+        '''
+        
         # get the numerical columns
         numerical_columns = df.select_dtypes(exclude=['object', 'bool']).columns.tolist()
 
@@ -346,21 +358,29 @@ def get_columns_info():
         rows = df.shape[0]
         columns = df.shape[1]
 
+        # datatypes of all the columns
+        temp_dtypes = df.dtypes.to_dict()
+        dtypes = {}
+        for key, value in temp_dtypes.items():
+            dtypes[key]=str(value)
+
         res = {
-            "categorical_columns":final_categorical_columns,
+            # "categorical_columns":final_categorical_columns,
+            "categorical_columns":categorical_columns,
             "numerical_columns":numerical_columns,
             "categorical_values": values,
             "all_columns":all_columns,
             "n_rows":rows,
-            "n_columns":columns
+            "n_columns":columns,
+            "dtypes":dtypes
         }
 
         return respond(data=res)
     
     except Exception as e:
-        log_error(err_msg="Error in fetching the categorical Columns List", error=err, exception=e)
+        log_error(err_msg="Error in fetching the all columns info", error=err, exception=e)
         if not err:
-            err = "Error in fetching the categorical Columns List"
+            err = "Error in fetching the all columns info"
         return respond(error=err)
 
 
@@ -469,4 +489,191 @@ def get_numerical_columns_info():
             err = "Error in fetching the Numerical Columns List"
         return respond(error=err)
     
+
+# Api to save the current dataset copy as the new dataset
+@datasetAPI.route("/save-changes", methods=["POST"])
+@jwt_required()
+def save_changes():
+    """
+        TAKES dataset name as input
+        PERFORMS save the functionality of deleting the current dataset and renaming the copy dataset as new dataset
+        RETURNS the success message as response
+    """
+    err = None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+        
+        # check if copy exits
+        if not check_dataset_copy_exists(dataset_name, user.id, user.email):
+            err = "No cahnges to save"
+            raise
+        else:
+
+            directory = get_user_directory(user.email)
+
+            # delete the current dataset
+            dataset_name = get_dataset_name(user.id, dataset_name)
+
+            # Check if you have the directory for the user
+            Path(directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
+
+            # Check if the dataset already exists
+            dataset_file = get_parquet_dataset_file_name(dataset_name, user.email)
+            if not Path(dataset_file).is_file():
+                err = "This original dataset does not exists"
+                raise
+            
+            # Delete the dataset
+            Path(dataset_file).unlink()
+            
+            # rename the copy dataset as new dataset
+            copy_dataset_name = dataset_name + "_copy"
+
+            copy_dataset_file = get_parquet_dataset_file_name(copy_dataset_name, user.email)
+
+            os.rename(copy_dataset_file, dataset_file) # dataset_file is the og dataset file
+
+            res = {
+                "msg":"Dataset changes saved successfully"
+            }
+
+            app.logger.info("Saved the changes in %s dataset", dataset_name)
+
+            return respond(data=res)
+
+    except Exception as e:
+        log_error(err_msg="Error in saving the dataset as new dataset", error=err, exception=e)
+        if not err:
+            err = "Error in saving the dataset as new dataset"
+        return respond(error=err)
+
+
+@datasetAPI.route("/revert-changes", methods=["POST"])
+@jwt_required()
+def revert_changes():
+    """
+    """
+    err=None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        dataset_name = get_dataset_name(user.id, dataset_name) # dataset_name = iris_1
+        dataset_name = dataset_name + "_copy" # dataset_name = iris_1_copy
+        dataset_file_copy = get_parquet_dataset_file_name(dataset_name, user.email)
+
+        if Path(dataset_file_copy).is_file():
+            Path(dataset_file_copy).unlink()
+        else:
+            err = "No changes detected in the current dataset"
+            raise
+        
+        res = {
+            "msg":"Dataset changes reverted successfully"
+        }
+
+        app.logger.info("Reverted the changes in %s dataset", dataset_name)
+        return respond(data=res)
     
+    except Exception as e:
+        log_error(err_msg="Error in reverting the changes", error=err, exception=e)
+        if not err:
+            err = "Error in reverting the changes"
+        return respond(error=err)
+
+
+# Api to search the for a specific value in the dataset using the pattern matching
+@datasetAPI.route("/search-categorical-value", methods=["POST"])
+@jwt_required()
+def search_categorical_value():
+    """
+        NEED API TRHOTELLING FOR THIS API : https://www.section.io/engineering-education/implementing-rate-limiting-in-flask/
+    """
+    err=None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        '''
+            Request Body : {
+                "dataset_name":"iris",
+                "column_name":"sepal_length",
+                "search_value":"5.1"
+            }
+        '''
+
+        column_name = request.json.get("column_name")
+        if not column_name:
+            err = "Column name is required"
+            raise
+
+        search_value = request.json.get("search_value")
+        if not search_value:
+            err = "Search value is required"
+            raise
+        
+        df, err = load_dataset(dataset_name, user.id, user.email)
+        if err:
+            raise
+        
+        # print(dataset_name, column_name, search_value)
+        # fetch the categorical columns
+        categorical_columns = df.select_dtypes(include=['object', 'bool']).columns.tolist()
+        if column_name not in categorical_columns:
+            err = "Column is not a categorical column"
+            raise
+
+        # check if the value is present in the column and if yes then return the values
+        values = []
+        values = df[df[column_name].str.contains(f'^{search_value}.*')][column_name].unique().tolist()
+     
+        res = {
+            "search_result":values
+        }
+
+        return respond(data=res)
+    
+    except Exception as e:
+        # log_error(err_msg="Error in searching the categorical value. Sending empty list", error=err, exception=e)
+        # NO NEED TO RAISE EXCEPTION HERE AS IT IS NOT A REGULAR API
+        res = {
+            "search_result":[]
+        }
+        return respond(data=res)
