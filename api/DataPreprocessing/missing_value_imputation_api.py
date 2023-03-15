@@ -29,7 +29,7 @@ missingValueImputationAPI_restful = Api(missingValueImputationAPI)
 def create():
     print("create")
     new_metadata = MetaData(
-        id = "id",
+        id = "icd",
         user_id = "user_id",
         user_email = "user_email",
         is_copy = False,
