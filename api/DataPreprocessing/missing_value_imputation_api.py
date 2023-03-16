@@ -28,8 +28,10 @@ missingValueImputationAPI_restful = Api(missingValueImputationAPI)
 @jwt_required()
 def get_missing_value_percentage():
     """
-        TAKES dataset name and column wise missing value as input
-        RETURNS the percentage of missing values in each column of the given dataset as well as the total percentage of missing values in the dataset
+        TAKES dataset name and get_all_columns as input
+        if get_all_columns is False, it also takes column_name and missing_value as input
+        RETURNS the percentage of missing values in each column of the given dataset as well as the total percentage of missing values in the dataset if get_all_columns is True
+        else it returns the percentage of missing values in the given column of the given dataset
     """
     err = None
     try:
@@ -47,6 +49,19 @@ def get_missing_value_percentage():
         if not dataset_name:
             err = "Dataset name is required"
             raise
+        
+        get_all_columns = request.json.get("get_all_columns")
+        if get_all_columns == None:
+            err = "get_all_columns is required"
+            raise
+        
+        column_name = request.json.get("column_name")
+        if get_all_columns == False and not column_name:
+            err = "column_name is required"
+            raise
+        
+        missing_value = request.json.get("missing_value")
+        # There is no check for missing_value because it can be None (null)        
 
         dataset_file_name = get_dataset_name(user.id, dataset_name) # dataset_name = iris_1
 
@@ -57,23 +72,44 @@ def get_missing_value_percentage():
         # Look if the copy of dataset exists and if it does, load dataset copy otherwise load the original dataset
         if check_dataset_copy_exists(dataset_name, user.id, user.email):
             df,err = load_dataset_copy(dataset_name, user.id, user.email)
-            metadata = MetaData.objects(dataset_file_name=dataset_file_name+"_copy").first()
+            metadata = MetaData.objects(dataset_file_name=dataset_file_name+"_copy").first_or_404(message=f"Dataset Metadata for {dataset_file_name}_copy not found")
+            
         else:
             df,err = load_dataset(dataset_name, user.id, user.email)
-            metadata = MetaData.objects(dataset_file_name=dataset_file_name).first()
+            metadata = MetaData.objects(dataset_file_name=dataset_file_name).first_or_404(message=f"Dataset Metadata for {dataset_file_name} not found")
         
         if err: 
             raise 
+    
+        # Update the missing value in the metadata file
+        if get_all_columns == False:
+            
+            # If column_name is not "all_columns" and the missing value is different from the one in the metadata file, update the metadata file
+            if column_name != "all_columns" and missing_value != metadata["column_wise_missing_value"][column_name]:
+                column_wise_missing_value = metadata["column_wise_missing_value"] 
+                column_wise_missing_value[column_name] = missing_value # Update the metadata object
+                metadata.update(column_wise_missing_value=column_wise_missing_value)
+            
+            # If column_name is "all_columns" and the missing value is different from the one in the metadata file, update the metadata file
+            elif column_name == "all_columns" and missing_value != metadata["all_columns_missing_value"]["missing_value"]:
+                metadata["all_columns_missing_value"]["missing_value"] = missing_value # Update the metadata object
+                metadata.update(all_columns_missing_value={"missing_value": missing_value})
+                
         
         # Get the column wise and all columns missing value from metadata file    
         column_wise_missing_value = metadata["column_wise_missing_value"]
         all_columns_missing_value = metadata["all_columns_missing_value"]["missing_value"]
         
+        # If get_all_columns is False, set cols to the column_name else set cols to all columns of the dataset
+        cols = []
+        if get_all_columns == False and column_name != "all_columns":
+            cols = [column_name]
+        else:
+            cols = df.columns.tolist()
     
         # ================================== Main Logic Start HERE ==================================
     
         # Get the percentage of missing values in each column
-        cols = df.columns.tolist()
         column_wise_missing_value_data = []
         for col in cols:
             missing_percentage = round(df[col].eq(column_wise_missing_value[col]).sum()/len(df[col]) * 100, 2)
@@ -88,22 +124,38 @@ def get_missing_value_percentage():
         # Sort the column wise missing value data in descending order of missing value percentage
         column_wise_missing_value_data.sort(key=lambda x: x["missing_value_percentage"], reverse=True)
         
+        
         # Get the total percentage of missing values in the dataset
-        all_columns_missing_value_percentage = round(df.eq(all_columns_missing_value).sum().sum()/df.size * 100, 2)
-        all_columns_non_missing_value_percentage = 100 - all_columns_missing_value_percentage
-        all_columns_missing_value_data = {
-            "column_name": "all_columns",
-            "missing_value_percentage": all_columns_missing_value_percentage,
-            "correct_value_percentage": all_columns_non_missing_value_percentage,
-            "missing_value_type": all_columns_missing_value
-        }
+        all_columns_missing_value_data = {}
+    
+        if get_all_columns == True or column_name == "all_columns":
+            all_columns_missing_value_percentage = round(df.eq(all_columns_missing_value).sum().sum()/df.size * 100, 2)
+            all_columns_non_missing_value_percentage = 100 - all_columns_missing_value_percentage
+            all_columns_missing_value_data = {
+                "column_name": "all_columns",
+                "missing_value_percentage": all_columns_missing_value_percentage,
+                "correct_value_percentage": all_columns_non_missing_value_percentage,
+                "missing_value_type": all_columns_missing_value
+            }
         
         # ================================ Main Logic Ends HERE =================================
+
         
-        res = {
-            "column_wise_missing_value_data": column_wise_missing_value_data,
-            "all_columns_missing_value_data": all_columns_missing_value_data,
-        }   
+        res = {}
+        
+        # When user wants to get the missing value percentage of a particular column and that column is NOT "all_columns"
+        if get_all_columns == False and column_name != "all_columns": 
+            res = column_wise_missing_value_data[0]
+        # When user wants to get the missing value percentage of a particular column and that column is  "all_columns"
+        elif get_all_columns == False and column_name == "all_columns":
+            res = all_columns_missing_value_data
+            
+        # When user wants to get the missing value percentage of column wise and all columns
+        else:
+            res = {
+                "column_wise_missing_value_data": column_wise_missing_value_data,
+                "all_columns_missing_value_data": all_columns_missing_value_data,
+            }   
         
         return respond(data=res)
     
@@ -113,16 +165,4 @@ def get_missing_value_percentage():
             err = "Error in Getting Missing Value Percentage"
         return respond(error=err)
     
-# # test API
-# @missingValueImputationAPI.route("/test", methods=["GET"])
-# @jwt_required()
-# def test():
-
-#     metadata_obj = MetaData.objects(dataset_name="iris1").exclude("column_list").first()
-#     metadata_dict = metadata_obj.to_mongo().to_dict()
-    
-#     del metadata_dict["_id"]
-#     metadata_dict["dataset_name"] = "iris2"
-#     metadata_obj.update(**metadata_dict)
-    
-#     return respond(data=metadata_obj)
+# API 
