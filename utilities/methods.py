@@ -71,22 +71,19 @@ def make_dataset_copy(dataset_name_inp, user_id, user_email):
             return err
         
         dataset_name = get_dataset_name(user_id, dataset_name_inp) # dataset_name = iris_1
-        dataset_name = dataset_name + "_copy" # dataset_name = iris_1_copy
-        dataset_file_copy = get_parquet_dataset_file_name(dataset_name, user_email)
+        dataset_name_copy = dataset_name + "_copy" # dataset_name = iris_1_copy
 
-        df.to_parquet(dataset_file_copy, compression="snappy", index=False)
-        
-        # Creating Copy of Metadata
-        metadata_obj = MetaData.objects(dataset_name=dataset_name).first()
-        metadata_dict = metadata_obj.to_mongo().to_dict()
-        metadata_dict.dataset_name = dataset_name_inp + "_copy"
-        metadata_dict.dataset_file_name = dataset_name
+        og_metadata_obj = MetaData.objects(dataset_file_name=dataset_name).first_or_404(message=f"Metadata for dataset {dataset_name} not found")
+        metadata_dict = og_metadata_obj.to_mongo().to_dict()
+        metadata_dict["is_copy"] = True
+        metadata_dict["dataset_file_name"] = dataset_name_copy # iris_1_copy
         del metadata_dict['_id']
-        
         copy_metadata_obj = MetaData(**metadata_dict)
-        copy_metadata_obj.dataset_name = dataset_name
-        
         copy_metadata_obj.save()
+
+        # save dataset copy
+        dataset_file_copy = get_parquet_dataset_file_name(dataset_name_copy, user_email) # iris_1_copy
+        df.to_parquet(dataset_file_copy, compression="snappy", index=False)
         
         app.logger.info("Dataset copy %s created successfully", dataset_name)
         return None

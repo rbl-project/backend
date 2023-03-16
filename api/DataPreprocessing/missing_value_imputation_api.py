@@ -7,7 +7,7 @@ from flask import current_app as app
 
 # UTILITIES
 from utilities.respond import respond
-from utilities.methods import load_dataset_copy, load_dataset, log_error, make_dataset_copy, check_dataset_copy_exists, save_dataset_copy
+from utilities.methods import get_dataset_name, load_dataset_copy, load_dataset, log_error, make_dataset_copy, check_dataset_copy_exists, save_dataset_copy
 
 # MODELS
 from models.user_model import Users
@@ -47,18 +47,20 @@ def get_missing_value_percentage():
         if not dataset_name:
             err = "Dataset name is required"
             raise
-                
+
+        dataset_file_name = get_dataset_name(user.id, dataset_name) # dataset_name = iris_1
+
         df = None
         err = None
         metadata = None
-        
+
         # Look if the copy of dataset exists and if it does, load dataset copy otherwise load the original dataset
         if check_dataset_copy_exists(dataset_name, user.id, user.email):
             df,err = load_dataset_copy(dataset_name, user.id, user.email)
-            metadata = MetaData.objects(dataset_name=dataset_name+"_copy").first()
+            metadata = MetaData.objects(dataset_file_name=dataset_file_name+"_copy").first()
         else:
             df,err = load_dataset(dataset_name, user.id, user.email)
-            metadata = MetaData.objects(dataset_name=dataset_name).first()
+            metadata = MetaData.objects(dataset_file_name=dataset_file_name).first()
         
         if err: 
             raise 
