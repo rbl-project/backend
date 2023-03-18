@@ -7,7 +7,7 @@ from flask import current_app as app
 
 # UTILITIES
 from utilities.respond import respond
-from utilities.methods import get_dataset_name, load_dataset_copy, load_dataset, log_error, make_dataset_copy, check_dataset_copy_exists, save_dataset_copy
+from utilities.methods import get_dataset_name, load_dataset_copy, load_dataset, log_error, make_dataset_copy, check_dataset_copy_exists, save_dataset_copy, get_row_column_metadata
 
 # MODELS
 from models.user_model import Users
@@ -15,8 +15,7 @@ from models.dataset_metadata_model import MetaData
 # constants
 
 # OTHER
-import json
-from datetime import datetime as dt
+import pandas as pd
 
 # BLUEPRINT
 missingValueImputationAPI = Blueprint("missingValueImputationAPI", __name__)
@@ -201,8 +200,8 @@ def get_missing_value_percentage():
     
 
 # API to Impute Missing Value in a Dataset
-@missingValueImputationAPI.route("/impute_missing_value", methods=["POST"]) # type: ignore
-@jwt_required # type: ignore
+@missingValueImputationAPI.route("/impute-missing-value", methods=["POST"]) # type: ignore
+@jwt_required() # type: ignore
 def impute_missing_value():
     """
         TAKES dataset_name, column_name, missing_value, imputation_method as input
@@ -231,8 +230,6 @@ def impute_missing_value():
             err = "Column name is required"
             raise
         
-        missing_value = request.json.get("missing_value")
-        
         imputation_method = request.json.get("imputation_method")
         if not imputation_method:
             err = "Imputation method is required"
@@ -251,11 +248,173 @@ def impute_missing_value():
         if err:
             raise
         
-        # Load the metadata of the dataset
-        metadata = MetaData.objects(dataset_file_name=dataset_name).first_or_404(message=f"Metadata of {dataset_name} not found")
         
+        dataset_file_name = get_dataset_name(user_id=user.id, dataset_name=dataset_name) # iris_1
+        copy_dataset_file_name = dataset_file_name + "_copy" # iris_1_copy
+        
+        # Load the metadata of Copy of the dataset
+        metadata = MetaData.objects(dataset_file_name=copy_dataset_file_name).first_or_404(message=f"Metadata of {dataset_name} not found")
+        
+        # Get the datatype of the column
+        column_dtype = None
+        if column_name != "all_columns":
+            column_dtype = metadata.column_datatypes[column_name]
         # ================== Business Logic Start ==================
         
+        # When user wants to impute missing value of a particular column
+        if column_name != "all_columns":
+            
+            # Imputattion is DROP ROWS or DROP COLUMN
+            if imputation_method == "drop_rows" or imputation_method == "drop_column":
+                
+                # Drop the rows with missing value
+                if imputation_method == "drop_rows":
+                    
+                    df.dropna(subset=[column_name], inplace=True)
+                    # update the metadata of the dataset
+                    if metadata.n_rows != df.shape[0]:
+                        metadata.n_rows = df.shape[0]
+                        metadata.n_values = df.size
+                        metadata.save()
+                 
+                # Drop entire column   
+                elif imputation_method == "drop_column":
+                    df.drop(column_name, axis=1, inplace=True)
+                
+                    # Update the metadata of the dataset
+                    updated_row_column_metadata = get_row_column_metadata(df)
+                    for key, value in updated_row_column_metadata.items():
+                        metadata[key] = value
+                    
+                    metadata.save()
+                
+            # Imputation is MEAN, MEDIAN , MODE or Custom_Value    
+            else:  
+                   
+                imputation_value = None
+                
+                # Imputation is MEAN
+                if imputation_method == "mean":
+                    
+                    # Check if the column is of type int or float
+                    if column_dtype == "object" or column_dtype == "bool":
+                        err = "Cannot Impute Mean value in a Categorical column"
+                        raise
+                    
+                    imputation_value = df[column_name].mean()
+                    
+                # Imputation is MEDIAN
+                elif imputation_method == "median":
+                    
+                    # Check if the column is of type int or float
+                    if column_dtype == "object" or column_dtype == "bool":
+                        err = "Cannot Impute Median value in a Categorical column"
+                        raise
+                    
+                    imputation_value = df[column_name].median()
+
+                # Imputation is MODE
+                elif imputation_method == "mode":
+                    imputation_value = df[column_name].mode()[0]
+            
+                # Imputation is Custom Value ( imputation_method == "custom_value" )
+                elif imputation_method == "custom_value":
+                    
+                    imputation_value = request.json.get("imputation_value")
+                    
+                    # Check if we are imputing a numeric value in a categorical column
+                    if (column_dtype == "object" or column_dtype == "bool") and isinstance(imputation_value, (int, float )):
+                        err = "Cannot Impute a Numeric value in a Categorical column"
+                        raise
+                    
+                    # Check if we are imputing a categorical value in a numeric column
+                    if (column_dtype != "object" and column_dtype != "bool") and not isinstance(imputation_value, (int, float )): 
+                        err = "Cannot Impute a Categorical value in a Numeric column"
+                        raise
+                
+                else:
+                    err = "Invalid Imputation Method"
+                    raise
+                
+                # Impute the missing value
+                df[column_name].fillna(imputation_value, inplace=True)
+            
+        # When user wants to impute missing value of all columns
+        else:
+            
+            # Imputattion is DROP ROWS or DROP COLUMN
+            if imputation_method == "drop_rows" or imputation_method == "drop_column":
+                
+                # Drop the rows with missing value
+                if imputation_method == "drop_rows":
+                    
+                    df.dropna(inplace=True)
+                    # update the metadata of the dataset
+                    if metadata.n_rows != df.shape[0]:
+                        metadata.n_rows = df.shape[0]
+                        metadata.n_values = df.size
+                        metadata.save()
+                 
+                # Drop entire column   
+                elif imputation_method == "drop_column":
+                    
+                    # Getting Columns with missing value
+                    columns_with_missing_value = []
+                    for column in df.columns:
+                        if df[column].isnull().values.any():
+                            columns_with_missing_value.append(column)
+
+                    df.drop(columns_with_missing_value, axis=1, inplace=True)
+                                   
+                    # Update the metadata of the dataset
+                    updated_row_column_metadata = get_row_column_metadata(df)
+                    for key, value in updated_row_column_metadata.items():
+                        metadata[key] = value
+                    
+                    metadata.save()
+                
+            # Imputation is MEAN, MEDIAN , MODE or Custom_Value    
+            else:  
+                   
+                imputation_values = None
+                
+                # Imputation is MEAN
+                if imputation_method == "mean":
+                    
+                    # For numerical columns impute mean value
+                    numercical_imputation_values = df[metadata.numerical_column_list].mean()
+                    
+                    # For categorical columns impute mode value
+                    categorical_imputation_values = df[metadata.categorical_column_list].mode().iloc[0]
+                    
+                    # Concatenate the imputation values
+                    imputation_values = pd.concat([numercical_imputation_values, categorical_imputation_values])
+                
+                # Imputation is MEDIAN
+                elif imputation_method == "median":
+                    
+                    # For numerical columns impute median value
+                    numercical_imputation_values = df[metadata.numerical_column_list].median()
+                    
+                    # For categorical columns impute mode value
+                    categorical_imputation_values = df[metadata.categorical_column_list].mode().iloc[0]
+                    
+                    # Concatenate the imputation values
+                    imputation_values = pd.concat([numercical_imputation_values, categorical_imputation_values])
+
+                # Imputation is MODE
+                elif imputation_method == "mode":
+                    imputation_values = df.mode().iloc[0]
+    
+                else:
+                    err = "Invalid Imputation Method"
+                    raise
+                    
+                # Impute the missing value
+                df.fillna(imputation_values, inplace=True)
+                
+        #  ========================== Older code Start ==============================
+        """
         # When user wants to impute missing value of a particular column
         if column_name != "all_columns":
             
@@ -351,13 +510,16 @@ def impute_missing_value():
                     
                 # Impute the missing value
                 df.replace(missing_value, imputation_value, inplace=True)
-            
+                
+        """
+        #  ========================== Older code End ==============================
         
         # ================== Business Logic End ==================
         save_dataset_copy(df, dataset_name, user.id, user.email)
 
         res = {
-            "msg": "Missing value imputation successful"
+            "msg": "Missing value imputation successful",
+            "res": df.to_dict(orient="records"),
         }
         return respond(data=res)
     
