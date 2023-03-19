@@ -10,6 +10,7 @@ from models.user_model import Users
 from models.dataset_metadata_model import MetaData
 from utilities.methods import ( 
     check_dataset_copy_exists,
+    delete_dataset_copy,
     get_dataset_name, 
     get_parquet_dataset_file_name, 
     get_user_directory,
@@ -159,8 +160,8 @@ def delete_dataset():
             err = "Dataset name is required that is to be deleted"
             raise
 
-        # dataset_name = f'{dataset_name.split(".")[0]}_{user.id}'
-        dataset_name = get_dataset_name(user.id, dataset_name)
+        dataset_name_to_check_copy = dataset_name # iris
+        dataset_name = get_dataset_name(user.id, dataset_name) # iris_1
 
         # Check if you have the directory for the user
         Path(directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
@@ -176,10 +177,18 @@ def delete_dataset():
 
         user.db_count = user.db_count - 1
         user.save()
-        
+
         app.logger.info("Dataset '%s' deleted successfully",str(dataset_name))
-        
+
+        # check if copy of the dataset exists 
+        if check_dataset_copy_exists(dataset_name_to_check_copy, user.id, user.email):
+            # Delete the copy
+            delete_dataset_copy(dataset_name_to_check_copy, user.id, user.email)
+            app.logger.info("Dataset '%s' copy deleted successfully",str(dataset_name))
+
         # Delete the metadata
+        dataset_name_copy = dataset_name + "_copy" # iris_1_copy
+
         metadata_obj = MetaData.objects(dataset_file_name=dataset_name).first()
         # if Metadata does not exists then log it and continue
         if metadata_obj:
@@ -187,6 +196,14 @@ def delete_dataset():
             app.logger.info("Dataset '%s' metadata deleted successfully",str(dataset_name))
         else:
             app.logger.info(f"Metadata for '{dataset_name}' does not exists")
+        
+        metadata_obj_copy = MetaData.objects(dataset_file_name=dataset_name_copy).first()
+        # if Metadata does not exists then log it and continue
+        if metadata_obj_copy:
+            metadata_obj_copy.delete()
+            app.logger.info("Dataset '%s' metadata deleted successfully",str(dataset_name_copy))
+        else:
+            app.logger.info(f"Metadata for '{dataset_name_copy}' does not exists")
 
         res = {
             "msg":"Dataset Deleted Successfully"
