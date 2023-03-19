@@ -1,11 +1,12 @@
 from manage.mongodb_setup import db
 
-class MetaData(db.Document):
-    id = db.StringField(primary_key=True) # <dataset_name>_<user_id> OR <dataset_name>_<user_id>_copy
-    user_id = db.StringField()
+class MetaData(db.Document): # <dataset_name>_<user_id> OR <dataset_name>_<user_id>_copy
+    id = db.SequenceField(primary_key=True,)
+    user_id = db.IntField()
     user_email = db.StringField()
     is_copy = db.BooleanField()
-    date_created = db.DateTimeField()
+    is_copy_modified = db.BooleanField()
+    date_created = db.DateTimeField()   
     last_modified = db.DateTimeField()
     dataset_name = db.StringField()
     dataset_extension = db.StringField()

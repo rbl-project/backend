@@ -7,12 +7,15 @@ from flask import (
     Response
 )
 from models.user_model import Users
+from models.dataset_metadata_model import MetaData
 from utilities.methods import ( 
     check_dataset_copy_exists,
+    delete_dataset_copy,
     get_dataset_name, 
     get_parquet_dataset_file_name, 
     get_user_directory,
     load_dataset,
+    load_dataset_copy,
     log_error
 )
 from utilities.respond import respond
@@ -67,13 +70,60 @@ def upload_dataset():
         
         # Read the csv and convert it into parquet
         df = pd.read_csv(dataset)
+
+
+        # ======== Dataset MetaData ==========
+        dataset_file_name = dataset_name  # Name of parquet file saved in the directory 
+        dataset_size = dataset.content_length / 1000000 # Size of the dataset in MB
+        _dataset_name, dataset_extension = dataset.filename.split(".") # Name of the dataset file and extension (Original)
+        n_rows,n_columns = df.shape # Number of rows in the dataset
+        n_values = n_rows * n_columns # Number of values in the dataset
+        column_list = list(df.columns) # List of columns in the dataset
+        column_datatypes = df.dtypes.astype(str).to_dict() # Dictionary of column name and its type
+        numerical_column_list = df.select_dtypes(exclude=['object', 'bool']).columns.tolist() # List of numerical columns
+        categorical_column_list = df.select_dtypes(include=['object', 'bool']).columns.tolist() # List of categorical columns
+        column_wise_missing_value = {col:None for col in column_list} # Dictionary of column name and its missing value
+        
+        # Create the metadata object
+        metadata_obj = MetaData(
+            user_id = user.id,
+            user_email = user.email,
+            is_copy = False,
+            is_copy_modified = False,
+            date_created = datetime.now(),
+            last_modified = datetime.now(),
+            dataset_name = _dataset_name,
+            dataset_extension = dataset_extension,
+            dataset_file_name = dataset_file_name,
+            dataset_size = dataset_size,
+            n_rows = n_rows,
+            n_columns = n_columns,
+            n_values = n_values,
+            column_list = column_list,
+            column_datatypes = column_datatypes,
+            numerical_column_list = numerical_column_list,
+            categorical_column_list = categorical_column_list,
+            column_wise_missing_value = column_wise_missing_value,
+            all_columns_missing_value = {"missing_value":None},
+        )
+        
+        # If Metadata already exists for the dataset then delete it and create a new one
+        existing_metadata = MetaData.objects(dataset_file_name=dataset_file_name).first()
+        if existing_metadata:
+            existing_metadata.delete()
+
+        # Save the metadata object
+        metadata_obj.save()
+        app.logger.info("Dataset '%s' metadata saved successfully",str(dataset.filename))
+
+        # Saving the dataset as parquet file
         df.to_parquet(dataset_file, compression="snappy", index=True)
 
         user.db_count = user.db_count + 1
         user.save()
-
+        
         app.logger.info("Dataset '%s' uploaded successfully",str(dataset.filename))
-
+        
         res = {
             "msg":"Dataset Uploaded Successfully"
         }
@@ -110,8 +160,8 @@ def delete_dataset():
             err = "Dataset name is required that is to be deleted"
             raise
 
-        # dataset_name = f'{dataset_name.split(".")[0]}_{user.id}'
-        dataset_name = get_dataset_name(user.id, dataset_name)
+        dataset_name_to_check_copy = dataset_name # iris
+        dataset_name = get_dataset_name(user.id, dataset_name) # iris_1
 
         # Check if you have the directory for the user
         Path(directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
@@ -127,6 +177,33 @@ def delete_dataset():
 
         user.db_count = user.db_count - 1
         user.save()
+
+        app.logger.info("Dataset '%s' deleted successfully",str(dataset_name))
+
+        # check if copy of the dataset exists 
+        if check_dataset_copy_exists(dataset_name_to_check_copy, user.id, user.email):
+            # Delete the copy
+            delete_dataset_copy(dataset_name_to_check_copy, user.id, user.email)
+            app.logger.info("Dataset '%s' copy deleted successfully",str(dataset_name))
+
+        # Delete the metadata
+        dataset_name_copy = dataset_name + "_copy" # iris_1_copy
+
+        metadata_obj = MetaData.objects(dataset_file_name=dataset_name).first()
+        # if Metadata does not exists then log it and continue
+        if metadata_obj:
+            metadata_obj.delete()
+            app.logger.info("Dataset '%s' metadata deleted successfully",str(dataset_name))
+        else:
+            app.logger.info(f"Metadata for '{dataset_name}' does not exists")
+        
+        metadata_obj_copy = MetaData.objects(dataset_file_name=dataset_name_copy).first()
+        # if Metadata does not exists then log it and continue
+        if metadata_obj_copy:
+            metadata_obj_copy.delete()
+            app.logger.info("Dataset '%s' metadata deleted successfully",str(dataset_name_copy))
+        else:
+            app.logger.info(f"Metadata for '{dataset_name_copy}' does not exists")
 
         res = {
             "msg":"Dataset Deleted Successfully"
@@ -207,18 +284,18 @@ def rename_dataset():
             err = "No such user exits"
             raise
         
-        dataset_name = request.json.get("dataset_name")
-        if not dataset_name:
+        dataset_name_inp = request.json.get("dataset_name")
+        if not dataset_name_inp:
             err = "Dataset name is required"
             raise
 
-        new_dataset_name = request.json.get("new_dataset_name")
-        if not new_dataset_name:
+        new_dataset_name_inp = request.json.get("new_dataset_name")
+        if not new_dataset_name_inp:
             err = "New dataset name is required"
             raise
 
-        dataset_name = get_dataset_name(user.id, dataset_name)
-        new_dataset_name = get_dataset_name(user.id, new_dataset_name)
+        dataset_name = get_dataset_name(user.id, dataset_name_inp) # irs_1
+        new_dataset_name = get_dataset_name(user.id, new_dataset_name_inp) # temp_1
 
         dataset_file = get_parquet_dataset_file_name(dataset_name, user.email)
         if not Path(dataset_file).is_file():
@@ -226,9 +303,13 @@ def rename_dataset():
             raise
 
         new_dataset_file = get_parquet_dataset_file_name(new_dataset_name, user.email)
-
         os.rename(dataset_file, new_dataset_file)
-
+        
+        # Update the metadata
+        metadata_obj = MetaData.objects(dataset_file_name=dataset_name).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
+        metadata_obj.update(dataset_name=new_dataset_name_inp, dataset_file_name=new_dataset_name)
+        
+        app.logger.info("Dataset '%s' renamed to '%s' successfully",str(dataset_name_inp), str(new_dataset_name_inp))
         res = {
             "msg":"Dataset Renamed Successfully"
         }
@@ -518,14 +599,33 @@ def save_changes():
         
         # check if copy exits
         if not check_dataset_copy_exists(dataset_name, user.id, user.email):
-            err = "No cahnges to save"
+            err = "No changes to save"
             raise
         else:
 
             directory = get_user_directory(user.email)
 
             # delete the current dataset
-            dataset_name = get_dataset_name(user.id, dataset_name)
+            dataset_name = get_dataset_name(user.id, dataset_name) # iris_1
+            copy_dataset_name = dataset_name + "_copy" #iris_1_copy
+
+            # Get Copy Metadata and Replace it with the original metadata
+            copy_metadata_obj = MetaData.objects(dataset_file_name=copy_dataset_name).first()
+            # if Copy Metadata Exists then replace it in place of original metadata and delete the copy metadata
+            if copy_metadata_obj:
+                og_metadata_obj = MetaData.objects(dataset_file_name=dataset_name).first()
+                copy_metadata_dict = copy_metadata_obj.to_mongo().to_dict()
+                del copy_metadata_dict["_id"]
+                copy_metadata_dict["last_modified"] = datetime.now()
+                copy_metadata_dict["is_copy"] = False
+                copy_metadata_dict["is_copy_modified"] = False
+                copy_metadata_dict["dataset_file_name"] = dataset_name
+                og_metadata_obj.update(**copy_metadata_dict)
+                copy_metadata_obj.delete()
+                app.logger.info("Dataset '%s' metadata deleted successfully",str(dataset_name))
+            else:
+                err = f"Metadata for '{dataset_name}' does not exists"
+                raise
 
             # Check if you have the directory for the user
             Path(directory).mkdir(parents=True, exist_ok=True) # creates the directory if not present
@@ -538,14 +638,11 @@ def save_changes():
             
             # Delete the dataset
             Path(dataset_file).unlink()
-            
+              
             # rename the copy dataset as new dataset
-            copy_dataset_name = dataset_name + "_copy"
-
             copy_dataset_file = get_parquet_dataset_file_name(copy_dataset_name, user.email)
-
             os.rename(copy_dataset_file, dataset_file) # dataset_file is the og dataset file
-
+            
             res = {
                 "msg":"Dataset changes saved successfully"
             }
@@ -593,6 +690,14 @@ def revert_changes():
             err = "No changes detected in the current dataset"
             raise
         
+        copy_metadata_obj = MetaData.objects(dataset_file_name=dataset_name).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
+        # copy_metadata_obj_dict = copy_metadata_obj.to_mongo().to_dict()
+        # if not copy_metadata_obj_dict.get("is_copy_modified"):
+        #     err = "No changes detected in the current dataset"
+        #     raise
+        
+        copy_metadata_obj.delete()
+                
         res = {
             "msg":"Dataset changes reverted successfully"
         }
@@ -649,10 +754,16 @@ def search_categorical_value():
             err = "Search value is required"
             raise
         
-        df, err = load_dataset(dataset_name, user.id, user.email)
-        if err:
-            raise
-        
+        # Check if dataset copy exists
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            df, err = load_dataset_copy(dataset_name, user.id, user.email)
+            if err:
+                raise
+        else:
+            df, err = load_dataset(dataset_name, user.id, user.email)
+            if err:
+                raise
+            
         # print(dataset_name, column_name, search_value)
         # fetch the categorical columns
         categorical_columns = df.select_dtypes(include=['object', 'bool']).columns.tolist()
@@ -662,8 +773,8 @@ def search_categorical_value():
 
         # check if the value is present in the column and if yes then return the values
         values = []
-        values = df[df[column_name].str.contains(f'^{search_value}.*')][column_name].unique().tolist()
-     
+        values = df[df[column_name].apply(str.lower).str.contains(f'^{search_value.lower()}.*')][column_name].unique().tolist()
+
         res = {
             "search_result":values
         }
@@ -677,3 +788,55 @@ def search_categorical_value():
             "search_result":[]
         }
         return respond(data=res)
+    
+
+# Api to fetch the metadata of the dataset using the copy flag
+@datasetAPI.route("/get-metadata", methods=["POST"])
+@jwt_required()
+def get_metadata():
+    """
+        TAKES the dataset name and copy flag returns the metadata of the dataset
+        PERFORMS the following operations
+            1. Fetch the metadata of the dataset
+            2. Return the metadata
+        RETURNS the metadata of the dataset
+    """
+    err=None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        # check if copy of the dataset exists
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            dataset_name = get_dataset_name(user.id, dataset_name) + "_copy"
+        else:
+            dataset_name = get_dataset_name(user.id, dataset_name)
+        
+        metadata_obj = MetaData.objects(dataset_file_name=dataset_name).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
+        metadata = metadata_obj.to_mongo().to_dict()
+
+        res = {
+            "metadata":metadata
+        }
+
+        app.logger.info("Fetched the metadata of %s dataset", dataset_name)
+
+        return respond(data=res)
+
+    except Exception as e:
+        log_error(err_msg="Error in fetching the metadata", error=err, exception=e)
+        if not err:
+            err = "Error in fetching the metadata"
+        return respond(error=err)

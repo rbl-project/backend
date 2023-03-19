@@ -5,6 +5,8 @@ from sqlalchemy import text
 import pandas as pd
 from flask import current_app as app
 from pathlib import Path
+from models.dataset_metadata_model import MetaData
+
 
 def is_email_valid(email):
     regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
@@ -61,18 +63,28 @@ def log_error(err_msg = None, error=None, exception=None):
     app.logger.error("%s. Error=> %s. Exception=> %s",err_msg, error, str(exception))
 
 
-def make_dataset_copy(dataset_name, user_id, user_email):
+def make_dataset_copy(dataset_name_inp, user_id, user_email):
     try:
-        df, err = load_dataset(dataset_name, user_id, user_email)
+        df, err = load_dataset(dataset_name_inp, user_id, user_email)
         if err:
             app.logger.error("Error in making the dataset copy. Error: %s", err)
             return err
         
-        dataset_name = get_dataset_name(user_id, dataset_name) # dataset_name = iris_1
-        dataset_name = dataset_name + "_copy" # dataset_name = iris_1_copy
-        dataset_file_copy = get_parquet_dataset_file_name(dataset_name, user_email)
+        dataset_name = get_dataset_name(user_id, dataset_name_inp) # dataset_name = iris_1
+        dataset_name_copy = dataset_name + "_copy" # dataset_name = iris_1_copy
 
+        og_metadata_obj = MetaData.objects(dataset_file_name=dataset_name).first_or_404(message=f"Metadata for dataset {dataset_name} not found")
+        metadata_dict = og_metadata_obj.to_mongo().to_dict()
+        metadata_dict["is_copy"] = True
+        metadata_dict["dataset_file_name"] = dataset_name_copy # iris_1_copy
+        del metadata_dict['_id']
+        copy_metadata_obj = MetaData(**metadata_dict)
+        copy_metadata_obj.save()
+
+        # save dataset copy
+        dataset_file_copy = get_parquet_dataset_file_name(dataset_name_copy, user_email) # iris_1_copy
         df.to_parquet(dataset_file_copy, compression="snappy", index=False)
+        
         app.logger.info("Dataset copy %s created successfully", dataset_name)
         return None
     
