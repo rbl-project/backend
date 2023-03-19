@@ -5,3 +5,6 @@
 # =========METHODS================
 
 # =========CONSTANTS================
+CATEGORICAL = "Categorical"
+NUMERICAL = "Numerical"
+COLUMN_TYPE_OPTIONS = ["Categorical", "Numerical"]

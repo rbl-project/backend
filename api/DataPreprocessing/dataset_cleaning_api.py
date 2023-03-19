@@ -7,15 +7,24 @@ from flask import current_app as app
 
 # UTILITIES
 from utilities.respond import respond
-from utilities.methods import load_dataset_copy, load_dataset, log_error, make_dataset_copy, check_dataset_copy_exists, save_dataset_copy
+from utilities.methods import (
+    get_dataset_name, 
+    load_dataset_copy, 
+    log_error, 
+    make_dataset_copy, 
+    check_dataset_copy_exists, 
+    save_dataset_copy
+)
 
 # MODELS
 from models.user_model import Users
+from models.dataset_metadata_model import MetaData
 
 # constants
+from api.DataPreprocessing.utilities_data_preprocessing import COLUMN_TYPE_OPTIONS, NUMERICAL, CATEGORICAL
 
 # OTHER
-import json
+import pandas as pd
 
 # BLUEPRINT
 dataCleaningAPI = Blueprint("dataCleaningAPI", __name__)
@@ -414,7 +423,41 @@ def rename_column():
         # ================== Business Logic End ==================
 
         save_dataset_copy(df, dataset_name, user.id, user.email)
+
+        # update metadata copy also
+        dataset_name_copy = get_dataset_name( user.id, dataset_name) + "_copy"
+
+        metadata_obj = MetaData.objects(dataset_file_name=dataset_name_copy).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
+        metadata_dict = metadata_obj.to_mongo().to_dict()
         
+        current_column_list = metadata_dict.get("column_list", [])
+        current_categorical_column_list = metadata_dict.get("categorical_column_list", [])
+        current_numerical_column_list = metadata_dict.get("numerical_column_list", [])
+        current_column_datatypes = metadata_dict.get("column_datatypes", {})
+        current_column_wise_missing_value = metadata_dict.get("column_wise_missing_value", {})
+        # find current col names and replace them with new names
+        for current_col_name, new_col_name in col_name_change_info.items():
+            if current_col_name in current_column_list:
+                current_column_list[current_column_list.index(current_col_name)] = new_col_name
+            
+            if current_col_name in current_categorical_column_list:
+                current_categorical_column_list[current_categorical_column_list.index(current_col_name)] = new_col_name
+            
+            if current_col_name in current_numerical_column_list:
+                current_numerical_column_list[current_numerical_column_list.index(current_col_name)] = new_col_name
+            
+            if current_col_name in current_column_datatypes:
+                current_column_datatypes[new_col_name] = current_column_datatypes.pop(current_col_name)
+            
+            if current_col_name in current_column_wise_missing_value:
+                current_column_wise_missing_value[new_col_name] = current_column_wise_missing_value.pop(current_col_name)
+        
+        metadata_dict["column_list"] = current_column_list
+
+        metadata_dict["is_copy_modified"] = True
+        del metadata_dict["_id"]
+        metadata_obj.update(**metadata_dict)
+
         res = {
             "msg": "Column names changed successfully",
         }
@@ -512,9 +555,20 @@ def find_and_replace():
 
         save_dataset_copy(df, dataset_name, user.id, user.email)
 
+        # Update the metadata of the copy
+        dataset_name_copy = get_dataset_name( user.id, dataset_name) + "_copy"
+
+        metadata_obj = MetaData.objects(dataset_file_name=dataset_name_copy).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
+        metadata_dict = metadata_obj.to_mongo().to_dict()
+
+        metadata_dict["is_copy_modified"] = True
+        del metadata_dict["_id"]
+        metadata_obj.update(**metadata_dict)
+
         res = {
             "msg": "Find and replace operation performed successfully",
         }
+
         return respond(data=res)
 
     except Exception as e:
@@ -578,6 +632,11 @@ def change_data_type():
         
         # ================== Business Logic Start ==================
 
+        for column in col_data_type_change_info:
+            if column not in df.columns:
+                err = f"Column '{column}' does not exists in the dataset"
+                raise
+
         try:
             df = df.astype(col_data_type_change_info)
         except ValueError as v:
@@ -588,6 +647,22 @@ def change_data_type():
     
         save_dataset_copy(df, dataset_name, user.id, user.email)
 
+        dataset_name_copy = get_dataset_name( user.id, dataset_name) + "_copy"
+
+        metadata_obj = MetaData.objects(dataset_file_name=dataset_name_copy).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
+        metadata_dict = metadata_obj.to_mongo().to_dict()
+
+        current_column_datatypes = metadata_dict.get("column_datatypes", {})
+        for column_name, new_data_type in col_data_type_change_info.items():
+            if new_data_type == "str":
+                new_data_type = "object"
+            if column_name in current_column_datatypes:
+                current_column_datatypes[column_name] = new_data_type
+        
+        metadata_dict["is_copy_modified"] = True
+        del metadata_dict["_id"]
+        metadata_obj.update(**metadata_dict)
+
         res = {
             "msg": "Data type of the columns changed successfully",
         }
@@ -597,4 +672,119 @@ def change_data_type():
         log_error(err_msg="Error in changing the data type of the columns", error=err, exception=e)
         if not err:
             err = "Error in changing the data type of the columns"
+        return respond(error=err)
+    
+
+# Api to change column type from categorical to numerical and vice versa
+@dataCleaningAPI.route("/change-column-type", methods=["POST"])
+@jwt_required()
+def change_column_type():
+    """
+        TAKES dataset_name, column_name, new_column_type as input
+        CHANGES the type of the given column in the given dataset
+        RETURNS the success message as a response
+    """
+    err=None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+
+        '''
+            Request body:{
+                "dataset_name": "dataset_name",
+                "col_type_change_info": {
+                    "column_name_1": "Numeric",
+                    "column_name_2": "Categorical",
+                }
+            }
+        '''
+
+        col_type_change_info = request.json.get("col_type_change_info")
+        if not col_type_change_info:
+            err = "Column type change info is required"
+            raise
+            
+        # Look if the copy of dataset exists and if it does, then rename the columns in that copy otherwise rename make a copy and rename the columns in that copy
+        if not check_dataset_copy_exists(dataset_name, user.id, user.email):
+            app.logger.info("Dataset copy of %s does not exist. Trying to make a copy of the dataset", dataset_name)
+            err = make_dataset_copy(dataset_name, user.id, user.email)
+            if err:
+                raise
+    
+        df, err = load_dataset_copy(dataset_name, user.id, user.email)
+        if err:
+            raise
+
+        # ================== Business Logic Start ==================
+
+        dataset_name_copy = get_dataset_name( user.id, dataset_name) + "_copy"
+        metadata_obj = MetaData.objects(dataset_file_name=dataset_name_copy).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
+        metadata_dict = metadata_obj.to_mongo().to_dict()
+        current_column_datatypes = metadata_dict.get("column_datatypes", {})
+        current_categorical_column_list = metadata_dict.get("categorical_column_list", [])
+        current_numerical_column_list = metadata_dict.get("numerical_column_list", [])
+
+        # for to numeric change the column to numeric and for to categorical change to string
+        for column in col_type_change_info:
+            if column not in df.columns:
+                err = f"Column '{column}' does not exists in the dataset"
+                raise
+        
+        for column, new_type in col_type_change_info.items():
+            if not new_type in COLUMN_TYPE_OPTIONS:
+                err = f"Invalid column type '{new_type}'"
+                raise
+
+            if new_type == NUMERICAL:
+                df[column] = pd.to_numeric(df[column], errors='coerce')
+                if column in current_categorical_column_list:
+                    current_categorical_column_list.remove(column)
+                if column not in current_numerical_column_list:
+                    current_numerical_column_list.append(column)
+                
+            elif new_type == CATEGORICAL:
+                df[column] = df[column].astype(str)
+                if column in current_numerical_column_list:
+                    current_numerical_column_list.remove(column)
+                if column not in current_categorical_column_list:
+                    current_categorical_column_list.append(column)
+            
+            if column in current_column_datatypes:
+                current_column_datatypes[column] = df[column].dtype.name
+
+        metadata_dict["column_datatypes"] = current_column_datatypes
+        metadata_dict["categorical_column_list"] = current_categorical_column_list
+        metadata_dict["numerical_column_list"] = current_numerical_column_list
+
+        # ================== Business Logic End ==================
+
+        save_dataset_copy(df, dataset_name, user.id, user.email)
+
+        # Update the metadata of the copy
+        metadata_dict["is_copy_modified"] = True
+        del metadata_dict["_id"]
+        metadata_obj.update(**metadata_dict)
+
+        res = {
+            "msg": "Column type changed successfully",
+        }
+
+        return respond(data=res)
+
+    except Exception as e:
+        log_error(err_msg="Error in changing the type of the columns", error=err, exception=e)
+        if not err:
+            err = "Error in changing the type of the columns"
         return respond(error=err)

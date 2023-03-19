@@ -5,6 +5,7 @@ class MetaData(db.Document): # <dataset_name>_<user_id> OR <dataset_name>_<user_
     user_id = db.IntField()
     user_email = db.StringField()
     is_copy = db.BooleanField()
+    is_copy_modified = db.BooleanField()
     date_created = db.DateTimeField()   
     last_modified = db.DateTimeField()
     dataset_name = db.StringField()
