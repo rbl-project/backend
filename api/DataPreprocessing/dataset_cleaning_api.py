@@ -96,12 +96,25 @@ def drop_by_column_value():
             df = df[~df[col_name].isin(col_value_info[col_name])]
 
         # ================== Business Logic End ==================
-        
+        shape = df.shape
         save_dataset_copy(df, dataset_name, user.id, user.email)
+
+        dataset_name_copy = get_dataset_name( user.id, dataset_name) + "_copy"
+        metadata_obj = MetaData.objects(dataset_file_name=dataset_name_copy).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
+        metadata_dict = metadata_obj.to_mongo().to_dict()
+
+        metadata_dict["is_copy_modified"] = True
+        metadata_dict["n_rows"] = shape[0]
+        metadata_dict["n_columns"] = shape[1]
+        metadata_dict["n_values"] = shape[0] * shape[1]
+        
+        del metadata_dict["_id"]
+        metadata_obj.update(**metadata_dict)
 
         res = {
             "msg": "Rows dropped by column value"
         }
+
         return respond(data=res)
     
     except Exception as e:
@@ -178,7 +191,20 @@ def drop_by_numerical_value():
         
         # ================== Business Logic End ==================
 
+        shape = df.shape
         save_dataset_copy(df, dataset_name, user.id, user.email)
+
+        dataset_name_copy = get_dataset_name( user.id, dataset_name) + "_copy"
+        metadata_obj = MetaData.objects(dataset_file_name=dataset_name_copy).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
+        metadata_dict = metadata_obj.to_mongo().to_dict()
+
+        metadata_dict["is_copy_modified"] = True
+        metadata_dict["n_rows"] = shape[0]
+        metadata_dict["n_columns"] = shape[1]
+        metadata_dict["n_values"] = shape[0] * shape[1]
+        
+        del metadata_dict["_id"]
+        metadata_obj.update(**metadata_dict)
 
         res = {
             "msg": "Rows dropped by numerical value"
@@ -269,7 +295,20 @@ def drop_by_row_index():
 
         # ================== Business Logic End ==================
 
+        shape = df.shape
         save_dataset_copy(df, dataset_name, user.id, user.email)
+
+        dataset_name_copy = get_dataset_name( user.id, dataset_name) + "_copy"
+        metadata_obj = MetaData.objects(dataset_file_name=dataset_name_copy).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
+        metadata_dict = metadata_obj.to_mongo().to_dict()
+
+        metadata_dict["is_copy_modified"] = True
+        metadata_dict["n_rows"] = shape[0]
+        metadata_dict["n_columns"] = shape[1]
+        metadata_dict["n_values"] = shape[0] * shape[1]
+        
+        del metadata_dict["_id"]
+        metadata_obj.update(**metadata_dict)
 
         res = {
             "msg": "Rows dropped successfully",
@@ -351,7 +390,42 @@ def drop_by_column_name():
 
         # ================== Business Logic End ==================
 
+        shape = df.shape
         save_dataset_copy(df, dataset_name, user.id, user.email)
+
+        dataset_name_copy = get_dataset_name( user.id, dataset_name) + "_copy"
+        metadata_obj = MetaData.objects(dataset_file_name=dataset_name_copy).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
+        metadata_dict = metadata_obj.to_mongo().to_dict()
+
+        metadata_dict["is_copy_modified"] = True
+        metadata_dict["n_rows"] = shape[0]
+        metadata_dict["n_columns"] = shape[1]
+        metadata_dict["n_values"] = shape[0] * shape[1]
+
+        current_column_list = metadata_dict.get("column_list", [])
+        current_categorical_column_list = metadata_dict.get("categorical_column_list", [])
+        current_numerical_column_list = metadata_dict.get("numerical_column_list", [])
+        current_column_datatypes = metadata_dict.get("column_datatypes", {})
+        current_column_wise_missing_value = metadata_dict.get("column_wise_missing_value", {})
+
+        for col in col_list:
+            if col in current_column_list:
+                current_column_list.remove(col)
+
+            if col in current_categorical_column_list:
+                current_categorical_column_list.remove(col)
+
+            if col in current_numerical_column_list:
+                current_numerical_column_list.remove(col)
+
+            if col in current_column_datatypes:
+                del current_column_datatypes[col]
+
+            if col in current_column_wise_missing_value:
+                del current_column_wise_missing_value[col]
+
+        del metadata_dict["_id"]
+        metadata_obj.update(**metadata_dict)
 
         res = {
             "msg": "Columns dropped successfully",
