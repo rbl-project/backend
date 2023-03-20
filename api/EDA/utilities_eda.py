@@ -12,5 +12,12 @@ def get_image(plt):
     image_str = base64.b64encode(bytes_image.read()).decode('utf-8')
     return image_str
 
+def get_row_index(df, page, rows_per_page):
+    start = page * rows_per_page
+    end = start + rows_per_page
+    return df.index[start:end]
+
+
 # =========CONSTANTS================
 ROW_END = "end"
+ROWS_PER_PAGE = 10
