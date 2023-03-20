@@ -113,11 +113,11 @@ def get_missing_value_percentage():
     
         """ ========================== Older code ============================== """
         # # Get the percentage of missing values in each column
-        # column_wise_missing_value_data = []
+        # missing_value_data = []
         # for col in cols:
         #     missing_percentage = round(df[col].eq(column_wise_missing_value[col]).sum()/len(df[col]) * 100, 2)
         #     non_missing_percentage = 100 - missing_percentage
-        #     column_wise_missing_value_data.append({
+        #     missing_value_data.append({
         #         "column_name": col, 
         #         "missing_value_percentage": missing_percentage, 
         #         "correct_value_percentage": non_missing_percentage,
@@ -125,7 +125,7 @@ def get_missing_value_percentage():
         #     })
         
         # # Sort the column wise missing value data in descending order of missing value percentage
-        # column_wise_missing_value_data.sort(key=lambda x: x["missing_value_percentage"], reverse=True)
+        # missing_value_data.sort(key=lambda x: x["missing_value_percentage"], reverse=True)
         
         
         # # Get the total percentage of missing values in the dataset
@@ -144,18 +144,18 @@ def get_missing_value_percentage():
         """ ========================== Older code End =============================="""
         
         # Get the percentage of missing values in each column
-        column_wise_missing_value_data = []
+        missing_value_data = []
         for col in cols:
             missing_percentage = round(df[col].isna().sum()/len(df[col]) * 100, 2)
             non_missing_percentage = 100 - missing_percentage
-            column_wise_missing_value_data.append({
+            missing_value_data.append({
                 "column_name": col, 
                 "missing_value_percentage": missing_percentage, 
                 "correct_value_percentage": non_missing_percentage,
             })
         
         # Sort the column wise missing value data in descending order of missing value percentage
-        column_wise_missing_value_data.sort(key=lambda x: x["missing_value_percentage"], reverse=True)
+        missing_value_data.sort(key=lambda x: x["missing_value_percentage"], reverse=True)
         
         
         # Get the total percentage of missing values in the dataset
@@ -165,30 +165,31 @@ def get_missing_value_percentage():
             all_columns_missing_value_percentage = round(df.isna().sum().sum()/df.size * 100, 2)
             all_columns_non_missing_value_percentage = 100 - all_columns_missing_value_percentage
             all_columns_missing_value_data = {
-                "column_name": "all_columns",
+                "column_name": "All Columns",
                 "missing_value_percentage": all_columns_missing_value_percentage,
                 "correct_value_percentage": all_columns_non_missing_value_percentage,
+                "all_columns": True
             }
+            
+            missing_value_data.insert(0, all_columns_missing_value_data)
+        
         
         
         # ================================ Main Logic Ends HERE =================================
 
         
-        res = {}
+        
         
         # When user wants to get the missing value percentage of a particular column and that column is NOT "all_columns"
         if get_all_columns == False and column_name != "all_columns": 
-            res = column_wise_missing_value_data[0]
+            missing_value_data = missing_value_data[0]
         # When user wants to get the missing value percentage of a particular column and that column is  "all_columns"
         elif get_all_columns == False and column_name == "all_columns":
-            res = all_columns_missing_value_data
-            
-        # When user wants to get the missing value percentage of column wise and all columns
-        else:
-            res = {
-                "column_wise_missing_value_data": column_wise_missing_value_data,
-                "all_columns_missing_value_data": all_columns_missing_value_data,
-            }   
+            missing_value_data = all_columns_missing_value_data
+        
+        res = {
+            "missing_value_data": missing_value_data,
+        }   
         
         return respond(data=res)
     
