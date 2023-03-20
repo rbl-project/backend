@@ -218,7 +218,6 @@ def global_data_representation():
         numerical_values = request.json.get("numerical_values", None)
         page = request.json.get("page", 0)
 
-        print(page)
 
         # categorical columns
         if categorical_values:
@@ -242,9 +241,15 @@ def global_data_representation():
 
         # get the row indices of the dataframe for the current page
         row_indices = get_row_index(df, page, ROWS_PER_PAGE)
-        df = df.iloc[row_indices]
+        df = df.loc[row_indices]
 
         n_datapoints_this_page = df.shape[0]
+
+        # cateogrical columns and numerical columns
+        categorical_columns = []
+        numerical_columns = []
+        categorical_columns = df.select_dtypes(include=['object', 'bool']).columns.tolist()
+        numerical_columns = df.select_dtypes(exclude=['object', 'bool']).columns.tolist()
 
         result = df.to_json(orient='split', index=True, )
         result = json.loads(result)
@@ -273,7 +278,9 @@ def global_data_representation():
             "column_list": column_list,
             "dtypes": dtypes,
             "result": result,
-            "current_page": page
+            "current_page": page,
+            "categorical_columns": categorical_columns,
+            "numerical_columns": numerical_columns
         }
 
         return respond(data=res)
