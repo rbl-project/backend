@@ -20,11 +20,8 @@ from manage.celery_setup import celery_instance
 from manage.jwt_extension import jwt
 
 # APIs
-from api.DataVisulization import data_visualization_api
 from api.User import user_api
 from api.DatasetUtilities import dataset_api
-from api.DataOverview import data_overview_api
-# from api.DataCleaning import data_cleaning_api
 from api.EDA import dataset_overview_api, data_correlation_api, graphs_api, tabular_representation_api
 from api.DataPreprocessing import dataset_cleaning_api, missing_value_imputation_api
 
@@ -140,9 +137,7 @@ def add_end_points(app):
     '''
     app.register_blueprint(user_api.userAPI, url_prefix = "/api")
     app.register_blueprint(dataset_api.datasetAPI, url_prefix = "/api")
-    app.register_blueprint(data_visualization_api.dataVisulizationAPI, url_prefix = "/api")
-    app.register_blueprint(data_overview_api.dataOverviewAPI, url_prefix = "/api")
-    
+       
     # Exploratory Data Analysis
     app.register_blueprint(dataset_overview_api.datasetOverviewAPI, url_prefix = "/api")
     app.register_blueprint(tabular_representation_api.tabularRepresentationAPI, url_prefix = "/api")
