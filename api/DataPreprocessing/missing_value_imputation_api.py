@@ -77,77 +77,25 @@ def get_missing_value_percentage():
         
         if err: 
             raise 
-    
-        ''' ========================== Older code ============================== '''
-        # # ========== Update Metadata ==========
-        # # Update the missing value in the metadata file
-        # if get_all_columns == False:
-            
-        #     # If column_name is not "all_columns" and the missing value is different from the one in the metadata file, update the metadata file
-        #     if column_name != "all_columns" and missing_value != metadata["column_wise_missing_value"][column_name]:
-        #         column_wise_missing_value = metadata["column_wise_missing_value"] 
-        #         column_wise_missing_value[column_name] = missing_value # Update the metadata object
-        #         metadata.update(column_wise_missing_value=column_wise_missing_value)
-            
-        #     # If column_name is "all_columns" and the missing value is different from the one in the metadata file, update the metadata file
-        #     elif column_name == "all_columns" and missing_value != metadata["all_columns_missing_value"]["missing_value"]:
-        #         metadata["all_columns_missing_value"]["missing_value"] = missing_value # Update the metadata object
-        #         metadata.update(all_columns_missing_value={"missing_value": missing_value})
         
-        
-        # # Get the column wise and all columns missing value from metadata file    
-        # column_wise_missing_value = metadata["column_wise_missing_value"]
-        # all_columns_missing_value = metadata["all_columns_missing_value"]["missing_value"]
-        """ ========================== Older code End ==============================""" 
-        
-        # ================================== Main Logic Start HERE ==================================
-        
+        # Check if the given column_name is present in the dataset
+        if column_name not in df.columns.tolist() and column_name != "All Columns" and get_all_columns == False:
+            err = "Column not found"
+            raise
         
         # If get_all_columns is False, set cols to the column_name else set cols to all columns of the dataset
         cols = []
-        if get_all_columns == False and column_name != "all_columns":
+        if get_all_columns == False and column_name != "All Columns":
             cols = [column_name]
         else:
             cols = df.columns.tolist()
     
-    
-        """ ========================== Older code ============================== """
-        # # Get the percentage of missing values in each column
-        # missing_value_data = []
-        # for col in cols:
-        #     missing_percentage = round(df[col].eq(column_wise_missing_value[col]).sum()/len(df[col]) * 100, 2)
-        #     non_missing_percentage = 100 - missing_percentage
-        #     missing_value_data.append({
-        #         "column_name": col, 
-        #         "missing_value_percentage": missing_percentage, 
-        #         "correct_value_percentage": non_missing_percentage,
-        #         "missing_value_type": column_wise_missing_value[col]
-        #     })
-        
-        # # Sort the column wise missing value data in descending order of missing value percentage
-        # missing_value_data.sort(key=lambda x: x["missing_value_percentage"], reverse=True)
-        
-        
-        # # Get the total percentage of missing values in the dataset
-        # all_columns_missing_value_data = {}
-    
-        # if get_all_columns == True or column_name == "all_columns":
-        #     all_columns_missing_value_percentage = round(df.eq(all_columns_missing_value).sum().sum()/df.size * 100, 2)
-        #     all_columns_non_missing_value_percentage = 100 - all_columns_missing_value_percentage
-        #     all_columns_missing_value_data = {
-        #         "column_name": "all_columns",
-        #         "missing_value_percentage": all_columns_missing_value_percentage,
-        #         "correct_value_percentage": all_columns_non_missing_value_percentage,
-        #         "missing_value_type": all_columns_missing_value
-        #     }
-        
-        """ ========================== Older code End =============================="""
         
         # Get the percentage of missing values in each column
         missing_value_data = []
         for col in cols:
             missing_percentage = round(df[col].isna().sum()/len(df[col]) * 100, 2)
-            non_missing_percentage = 100 - missing_percentage
+            non_missing_percentage = round(100 - missing_percentage,1)
             missing_value_data.append({
                 "column_name": col, 
                 "missing_value_percentage": missing_percentage, 
@@ -161,9 +109,9 @@ def get_missing_value_percentage():
         # Get the total percentage of missing values in the dataset
         all_columns_missing_value_data = {}
     
-        if get_all_columns == True or column_name == "all_columns":
-            all_columns_missing_value_percentage = round(df.isna().sum().sum()/df.size * 100, 2)
-            all_columns_non_missing_value_percentage = 100 - all_columns_missing_value_percentage
+        if get_all_columns == True or column_name == "All Columns":
+            all_columns_missing_value_percentage = round(df.isna().sum().sum()/df.size * 100, 1)
+            all_columns_non_missing_value_percentage = round(100 - all_columns_missing_value_percentage,1)
             all_columns_missing_value_data = {
                 "column_name": "All Columns",
                 "missing_value_percentage": all_columns_missing_value_percentage,
@@ -180,14 +128,15 @@ def get_missing_value_percentage():
         
         
         
-        # When user wants to get the missing value percentage of a particular column and that column is NOT "all_columns"
-        if get_all_columns == False and column_name != "all_columns": 
+        # When user wants to get the missing value percentage of a particular column and that column is NOT "All Columns"
+        if get_all_columns == False and column_name != "All Columns": 
             missing_value_data = missing_value_data[0]
-        # When user wants to get the missing value percentage of a particular column and that column is  "all_columns"
-        elif get_all_columns == False and column_name == "all_columns":
+        # When user wants to get the missing value percentage of a particular column and that column is  "All Columns"
+        elif get_all_columns == False and column_name == "All Columns":
             missing_value_data = all_columns_missing_value_data
         
         res = {
+            "all_columns": get_all_columns,
             "missing_value_data": missing_value_data,
         }   
         
@@ -249,6 +198,7 @@ def impute_missing_value():
         if err:
             raise
         
+        response_message = ""
         
         dataset_file_name = get_dataset_name(user_id=user.id, dataset_name=dataset_name) # iris_1
         copy_dataset_file_name = dataset_file_name + "_copy" # iris_1_copy
@@ -258,12 +208,12 @@ def impute_missing_value():
         
         # Get the datatype of the column
         column_dtype = None
-        if column_name != "all_columns":
+        if column_name != "All Columns":
             column_dtype = metadata.column_datatypes[column_name]
         # ================== Business Logic Start ==================
         
         # When user wants to impute missing value of a particular column
-        if column_name != "all_columns":
+        if column_name != "All Columns":
             
             # Imputattion is DROP ROWS or DROP COLUMN
             if imputation_method == "drop_rows" or imputation_method == "drop_column":
@@ -276,7 +226,7 @@ def impute_missing_value():
                     if metadata.n_rows != df.shape[0]:
                         metadata.n_rows = df.shape[0]
                         metadata.n_values = df.size
-                        metadata.save()
+                        response_message = "Rows with missing value dropped successfully"
                  
                 # Drop entire column   
                 elif imputation_method == "drop_column":
@@ -286,8 +236,8 @@ def impute_missing_value():
                     updated_row_column_metadata = get_row_column_metadata(df)
                     for key, value in updated_row_column_metadata.items():
                         metadata[key] = value
-                    
-                    metadata.save()
+                        
+                    response_message = "Column dropped successfully"
                 
             # Imputation is MEAN, MEDIAN , MODE or Custom_Value    
             else:  
@@ -339,6 +289,8 @@ def impute_missing_value():
                 
                 # Impute the missing value
                 df[column_name].fillna(imputation_value, inplace=True)
+                
+                response_message = "Missing value imputed successfully"
             
         # When user wants to impute missing value of all columns
         else:
@@ -354,7 +306,8 @@ def impute_missing_value():
                     if metadata.n_rows != df.shape[0]:
                         metadata.n_rows = df.shape[0]
                         metadata.n_values = df.size
-                        metadata.save()
+                    
+                    response_message = "Rows with missing value dropped successfully"
                  
                 # Drop entire column   
                 elif imputation_method == "drop_column":
@@ -372,8 +325,8 @@ def impute_missing_value():
                     for key, value in updated_row_column_metadata.items():
                         metadata[key] = value
                     
-                    metadata.save()
-                
+                    response_message = "Columns with missing value dropped successfully"
+                    
             # Imputation is MEAN, MEDIAN , MODE or Custom_Value    
             else:  
                    
@@ -414,113 +367,17 @@ def impute_missing_value():
                 # Impute the missing value
                 df.fillna(imputation_values, inplace=True)
                 
-        #  ========================== Older code Start ==============================
-        """
-        # When user wants to impute missing value of a particular column
-        if column_name != "all_columns":
-            
-            # Imputattion is DROP ROWS or DROP COLUMN
-            if imputation_method == "drop_rows" or imputation_method == "drop_column":
-                
-                # Drop the rows with missing value
-                if imputation_method == "drop_rows":
-                    df = df[df[column_name] != missing_value]
-                 
-                # Drop entire column   
-                elif imputation_method == "drop_column":
-                    df.drop(column_name, axis=1, inplace=True)
-                
-                    # Update the metadata of the dataset
-                    metadata.column_names = list(df.columns)
-                    metadata.save()
-                
-            # Imputation is MEAN, MEDIAN , MODE or Custom_Value    
-            else:  
-                   
-                imputation_value = None
-                
-                # Imputation is MEAN
-                if imputation_method == "mean":
-                    imputation_value = pd.to_numeric(df[column_name], errors='coerce').mean()
-                
-                # Imputation is MEDIAN
-                elif imputation_method == "median":
-                    imputation_value = pd.to_numeric(df[column_name], errors='coerce').median()
-
-                # Imputation is MODE
-                elif imputation_method == "mode":
-                    imputation_value = df[column_name].replace(missing_value, np.nan).mode()[0]
-            
-                # Imputation is Custom Value ( imputation_method == "custom_value" )
-                else:
-                    imputation_value = request.json.get("imputation_value")
-                    
-                # Impute the missing value
-                df.replace(missing_value, imputation_value, inplace=True)
-            
-        # When user wants to impute missing value of all columns
-        else:
-            
-            # Imputattion is DROP ROWS or DROP COLUMN
-            if imputation_method == "drop_rows" or imputation_method == "drop_column":
-                
-                # Drop the rows with missing value
-                if imputation_method == "drop_rows":
-                    
-                    cols = df.columns.tolist()
-                    for col in cols:
-                        df = df[df[col] != missing_value]
-                 
-                # Drop entire column   
-                elif imputation_method == "drop_column":
-                    
-                    # Get the columns with missing value
-                    cols_with_missing_value = []
-                    cols = df.columns.tolist()
-                    
-                    for col in cols:
-                        if df[col].eq(missing_value).sum() > 0:
-                            cols_with_missing_value.append(col)
-                    
-                    df.drop(cols_with_missing_value, axis=1, inplace=True)
-                                   
-                    # Update the metadata of the dataset
-                    metadata.column_names = list(df.columns)
-                    metadata.save()
-                
-            # Imputation is MEAN, MEDIAN , MODE or Custom_Value    
-            else:  
-                   
-                imputation_value = None
-                
-                # Imputation is MEAN
-                if imputation_method == "mean":
-                    imputation_value = pd.to_numeric(df[column_name], errors='coerce').mean()
-                
-                # Imputation is MEDIAN
-                elif imputation_method == "median":
-                    imputation_value = pd.to_numeric(df[column_name], errors='coerce').median()
-
-                # Imputation is MODE
-                elif imputation_method == "mode":
-                    imputation_value = df[column_name].replace(missing_value, np.nan).mode()[0]
-            
-                # Imputation is Custom Value ( imputation_method == "custom_value" )
-                else:
-                    imputation_value = request.json.get("imputation_value")
-                    
-                # Impute the missing value
-                df.replace(missing_value, imputation_value, inplace=True)
-                
-        """
-        #  ========================== Older code End ==============================
+                response_message = "Missing value imputed successfully"
+        
+        # Update the metadata of the dataset
+        metadata.is_copy_modified = True
+        metadata.save()
         
         # ================== Business Logic End ==================
         save_dataset_copy(df, dataset_name, user.id, user.email)
 
         res = {
-            "msg": "Missing value imputation successful",
-            "res": df.to_dict(orient="records"),
+            "msg": response_message,
         }
         return respond(data=res)
     
