@@ -137,7 +137,30 @@ def delete_dataset_copy(dataset_name, user_id, user_email):
     except Exception as e:
         app.logger.error("Error in deleting the dataset copy")
         raise Exception(e)
+   
+def get_row_column_metadata(df):
     
+    n_rows,n_columns = df.shape # Number of rows in the dataset
+    n_values = n_rows * n_columns # Number of values in the dataset
+    column_list = list(df.columns) # List of columns in the dataset
+    column_datatypes = df.dtypes.astype(str).to_dict() # Dictionary of column name and its type
+    numerical_column_list = df.select_dtypes(exclude=['object', 'bool']).columns.tolist() # List of numerical columns
+    categorical_column_list = df.select_dtypes(include=['object', 'bool']).columns.tolist() # List of categorical columns
+    column_wise_missing_value = {col:None for col in column_list} # Dictionary of column name and its missing value
+    all_columns_missing_value = {"missing_value":None} # Missing value in the dataset
+    
+    return {
+        "n_rows": n_rows,
+        "n_columns": n_columns,
+        "n_values": n_values,
+        "column_list": column_list,
+        "column_datatypes": column_datatypes,
+        "numerical_column_list": numerical_column_list,
+        "categorical_column_list": categorical_column_list,
+        "column_wise_missing_value": column_wise_missing_value,
+        "all_columns_missing_value": all_columns_missing_value
+    }
+     
 # =========================OLDER UNNECESSARY CODE=========================
 def get_dataset(dataset_name, db):
     try:
