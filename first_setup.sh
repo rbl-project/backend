@@ -65,6 +65,40 @@ sudo service postgresql start
 
 sleep 3
 
+# Configure mongodb
+echo -e "\n======Updating Packages======\n"
+sudo apt update
+
+echo -e "\n======Configuring Mongodb v6.0======\n"
+sleep 3
+
+echo -e "\n======Importing the public key for monodb======\n"
+wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
+
+echo -e "\n======Creating the list file for mongodb======\n"
+echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+
+echo -e "\n======Updating Packages======\n"
+sudo apt-get update
+
+echo -e "\n======Installing Mongodb======\n"
+sudo apt install -y mongodb-org
+
+echo -e "\n======Checking the Mongodb======\n"
+mongod --version
+sleep 3
+
+echo -e "\n======Making the data directory======\n"
+mkdir -p ~/data/db
+
+echo -e "\n======Starting the Mongodb======\n"
+sudo systemctl start mongod
+
+echo -e "\n======Checking the Mongodb======\n"
+sudo systemctl status mongod
+sleep 3
+
+
 # Nginx Configuration
 echo -e "\n======Installing Nginx======\n"
 sudo apt install -y nginx
