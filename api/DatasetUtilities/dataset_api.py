@@ -831,8 +831,6 @@ def get_metadata():
             "metadata":metadata
         }
 
-        app.logger.info("Fetched the metadata of %s dataset", dataset_name)
-
         return respond(data=res)
 
     except Exception as e:
