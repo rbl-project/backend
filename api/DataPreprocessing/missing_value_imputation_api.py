@@ -60,11 +60,23 @@ def get_missing_value_percentage():
             raise       
 
         dataset_file_name = get_dataset_name(user.id, dataset_name) # dataset_name = iris_1
-
+        
+        # Varibale to check if particular column or all columns are deleted from copy of dataset
+        is_column_deleted = False
+        
         df = None
         err = None
         metadata = None
-
+        
+        # ======================== Get Metada and Dataset ( Original) to handle some special cases =========================
+        
+         # get Metadata of original dataset
+        metadata_og = MetaData.objects(dataset_file_name=dataset_file_name).first_or_404(message=f"Dataset Metadata for {dataset_file_name} not found")
+        df_og,err = load_dataset(dataset_name, user.id, user.email)
+        
+        if err:
+            raise
+        
         # ======= Get Metada =======
         # Look if the copy of dataset exists and if it does, load dataset copy otherwise load the original dataset
         if check_dataset_copy_exists(dataset_name, user.id, user.email):
@@ -76,10 +88,15 @@ def get_missing_value_percentage():
             metadata = MetaData.objects(dataset_file_name=dataset_file_name).first_or_404(message=f"Dataset Metadata for {dataset_file_name} not found")
         
         if err: 
-            raise 
+            raise
+        
+        # if the dataset is original dataset and there are no columns
+        if metadata.is_copy == False and len(metadata.column_list) == 0:
+            err = "Dataset is empty"
+            raise
         
         # Check if the given column_name is present in the dataset
-        if column_name not in df.columns.tolist() and column_name != "All Columns" and get_all_columns == False:
+        if column_name not in df.columns.tolist() and column_name != "All Columns" and get_all_columns == False and metadata.is_copy == False:
             err = "Column not found"
             raise
         
@@ -87,6 +104,11 @@ def get_missing_value_percentage():
         cols = []
         if get_all_columns == False and column_name != "All Columns":
             cols = [column_name]
+            
+            # Check if the given column_name is present in the copy of dataset
+            if column_name not in metadata.column_list:
+                is_column_deleted = True
+                
         else:
             cols = df.columns.tolist()
     
@@ -94,7 +116,15 @@ def get_missing_value_percentage():
         # Get the percentage of missing values in each column
         missing_value_data = []
         for col in cols:
-            missing_percentage = round(df[col].isna().sum()/len(df[col]) * 100, 2)
+            missing_percentage = 0
+            
+            # if the column is not deleted from the copy of dataset then calculate the missing value percentage
+            if is_column_deleted == False:
+                missing_percentage = round(df[col].isna().sum()/len(df[col]) * 100, 2)
+            # if the column is deleted from the copy of dataset then calculate the missing value percentage from the original dataset
+            else:
+                missing_percentage = round(df_og[col].isna().sum()/len(df_og[col]) * 100, 2)
+                
             non_missing_percentage = round(100 - missing_percentage,1)
             missing_value_data.append({
                 "column_name": col, 
@@ -110,8 +140,17 @@ def get_missing_value_percentage():
         all_columns_missing_value_data = {}
     
         if get_all_columns == True or column_name == "All Columns":
-            all_columns_missing_value_percentage = round(df.isna().sum().sum()/df.size * 100, 1)
+            
+            all_columns_missing_value_percentage = 0
+            # Check if all columns are deleted from the copy of dataset
+            if metadata.is_copy == True and len(metadata.column_list) == 0: # If all columns are deleted from the copy of dataset
+                is_column_deleted = True
+                all_columns_missing_value_percentage = round(df_og.isna().sum().sum()/df_og.size * 100, 1)
+            else:
+                all_columns_missing_value_percentage = round(df.isna().sum().sum()/df.size * 100, 1)
+                
             all_columns_non_missing_value_percentage = round(100 - all_columns_missing_value_percentage,1)
+            
             all_columns_missing_value_data = {
                 "column_name": "All Columns",
                 "missing_value_percentage": all_columns_missing_value_percentage,
@@ -138,6 +177,7 @@ def get_missing_value_percentage():
         res = {
             "all_columns": get_all_columns,
             "missing_value_data": missing_value_data,
+            "is_column_deleted": is_column_deleted,
         }   
         
         return respond(data=res)
