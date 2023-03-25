@@ -37,7 +37,7 @@ def load_dataset(dataset_name, user_id, user_email):
         dataset_file = get_parquet_dataset_file_name(dataset_name, user_email)
         
         if not Path(dataset_file).is_file():
-            err = "This dataset does not exists"
+            err = f"'{dataset_name}' dataset does not exists"
             return None, err
 
         df = pd.read_parquet(dataset_file)
