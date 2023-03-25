@@ -61,9 +61,6 @@ def get_missing_value_percentage():
 
         dataset_file_name = get_dataset_name(user.id, dataset_name) # dataset_name = iris_1
         
-        # Varibale to check if particular column or all columns are deleted from copy of dataset
-        is_column_deleted = False
-        
         df = None
         err = None
         metadata = None
@@ -104,32 +101,31 @@ def get_missing_value_percentage():
         cols = []
         if get_all_columns == False and column_name != "All Columns":
             cols = [column_name]
-            
-            # Check if the given column_name is present in the copy of dataset
-            if column_name not in metadata.column_list:
-                is_column_deleted = True
-                
         else:
-            cols = df.columns.tolist()
+            cols = metadata_og.column_list
     
         
         # Get the percentage of missing values in each column
         missing_value_data = []
         for col in cols:
             missing_percentage = 0
+            is_column_deleted = False
             
-            # if the column is not deleted from the copy of dataset then calculate the missing value percentage
-            if is_column_deleted == False:
-                missing_percentage = round(df[col].isna().sum()/len(df[col]) * 100, 2)
             # if the column is deleted from the copy of dataset then calculate the missing value percentage from the original dataset
-            else:
+            if col not in metadata.column_list:
+                is_column_deleted = True
                 missing_percentage = round(df_og[col].isna().sum()/len(df_og[col]) * 100, 2)
+                
+            # if the column is not deleted from the copy of dataset then calculate the missing value percentage
+            else: 
+                missing_percentage = round(df[col].isna().sum()/len(df[col]) * 100, 2)
                 
             non_missing_percentage = round(100 - missing_percentage,1)
             missing_value_data.append({
                 "column_name": col, 
                 "missing_value_percentage": missing_percentage, 
                 "correct_value_percentage": non_missing_percentage,
+                "is_column_deleted": is_column_deleted,
             })
         
         # Sort the column wise missing value data in descending order of missing value percentage
@@ -142,6 +138,8 @@ def get_missing_value_percentage():
         if get_all_columns == True or column_name == "All Columns":
             
             all_columns_missing_value_percentage = 0
+            is_column_deleted = False
+            
             # Check if all columns are deleted from the copy of dataset
             if metadata.is_copy == True and len(metadata.column_list) == 0: # If all columns are deleted from the copy of dataset
                 is_column_deleted = True
@@ -155,7 +153,8 @@ def get_missing_value_percentage():
                 "column_name": "All Columns",
                 "missing_value_percentage": all_columns_missing_value_percentage,
                 "correct_value_percentage": all_columns_non_missing_value_percentage,
-                "all_columns": True
+                "all_columns": True,
+                "is_column_deleted": is_column_deleted,
             }
             
             missing_value_data.insert(0, all_columns_missing_value_data)
@@ -177,7 +176,6 @@ def get_missing_value_percentage():
         res = {
             "all_columns": get_all_columns,
             "missing_value_data": missing_value_data,
-            "is_column_deleted": is_column_deleted,
         }   
         
         return respond(data=res)
