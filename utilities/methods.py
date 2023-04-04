@@ -37,7 +37,7 @@ def load_dataset(dataset_name, user_id, user_email):
         dataset_file = get_parquet_dataset_file_name(dataset_name, user_email)
         
         if not Path(dataset_file).is_file():
-            err = "This dataset does not exists"
+            err = f"'{dataset_name}' dataset does not exists"
             return None, err
 
         df = pd.read_parquet(dataset_file)
@@ -146,8 +146,6 @@ def get_row_column_metadata(df):
     column_datatypes = df.dtypes.astype(str).to_dict() # Dictionary of column name and its type
     numerical_column_list = df.select_dtypes(exclude=['object', 'bool']).columns.tolist() # List of numerical columns
     categorical_column_list = df.select_dtypes(include=['object', 'bool']).columns.tolist() # List of categorical columns
-    column_wise_missing_value = {col:None for col in column_list} # Dictionary of column name and its missing value
-    all_columns_missing_value = {"missing_value":None} # Missing value in the dataset
     
     return {
         "n_rows": n_rows,
@@ -157,8 +155,6 @@ def get_row_column_metadata(df):
         "column_datatypes": column_datatypes,
         "numerical_column_list": numerical_column_list,
         "categorical_column_list": categorical_column_list,
-        "column_wise_missing_value": column_wise_missing_value,
-        "all_columns_missing_value": all_columns_missing_value
     }
      
 # =========================OLDER UNNECESSARY CODE=========================

@@ -82,7 +82,8 @@ def upload_dataset():
         column_datatypes = df.dtypes.astype(str).to_dict() # Dictionary of column name and its type
         numerical_column_list = df.select_dtypes(exclude=['object', 'bool']).columns.tolist() # List of numerical columns
         categorical_column_list = df.select_dtypes(include=['object', 'bool']).columns.tolist() # List of categorical columns
-        column_wise_missing_value = {col:None for col in column_list} # Dictionary of column name and its missing value
+        column_deleted_status = {column:False for column in column_list} # Dictionary of column name and its deleted status
+
         
         # Create the metadata object
         metadata_obj = MetaData(
@@ -103,8 +104,7 @@ def upload_dataset():
             column_datatypes = column_datatypes,
             numerical_column_list = numerical_column_list,
             categorical_column_list = categorical_column_list,
-            column_wise_missing_value = column_wise_missing_value,
-            all_columns_missing_value = {"missing_value":None},
+            column_deleted_status = column_deleted_status
         )
         
         # If Metadata already exists for the dataset then delete it and create a new one
@@ -407,19 +407,25 @@ def get_all_columns_info():
             err = "Dataset name is required"
             raise
 
-        df, err = load_dataset(dataset_name, user.id, user.email)
-        if err:
+        dataset_file_name = get_dataset_name(user.id, dataset_name) # dataset_name = iris_1
+        
+        df = None
+        err = None
+        # Look if the copy of dataset exists and if it does, load dataset copy otherwise load the original dataset
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            df,err = load_dataset_copy(dataset_name, user.id, user.email)
+            metadata = MetaData.objects(dataset_file_name=dataset_file_name+"_copy").first_or_404(message=f"Dataset Metadata for {dataset_file_name}_copy not found")
+        else:
+            df,err = load_dataset(dataset_name, user.id, user.email)
+            metadata = MetaData.objects(dataset_file_name=dataset_file_name).first_or_404(message=f"Dataset Metadata for {dataset_file_name} not found")
+        
+        if err: 
             raise
         
-        # all the columns
-        all_columns = df.columns.tolist()
-
-        # get the categorical columns
-        categorical_columns = df.select_dtypes(include=['object', 'bool']).columns.tolist()
         
         #todo: Give all the categorical values in the response and give top 100 unique values in the frontend. As soon as someone types something we give next top 100
         values = {}
-        for column in categorical_columns:
+        for column in metadata.categorical_column_list:
             values[column] = df[column].unique().tolist()[0:100]
 
         # get the unique values of categorical column which have less than 100 unique values
@@ -431,29 +437,17 @@ def get_all_columns_info():
                 final_categorical_columns.append(column)
                 values[column] = df[column].unique().tolist()
         '''
-        
-        # get the numerical columns
-        numerical_columns = df.select_dtypes(exclude=['object', 'bool']).columns.tolist()
-
-        # numbert of rows and columns
-        rows = df.shape[0]
-        columns = df.shape[1]
-
-        # datatypes of all the columns
-        temp_dtypes = df.dtypes.to_dict()
-        dtypes = {}
-        for key, value in temp_dtypes.items():
-            dtypes[key]=str(value)
 
         res = {
             # "categorical_columns":final_categorical_columns,
-            "categorical_columns":categorical_columns,
-            "numerical_columns":numerical_columns,
+            "categorical_columns":metadata.categorical_column_list,
+            "numerical_columns":metadata.numerical_column_list,
             "categorical_values": values,
-            "all_columns":all_columns,
-            "n_rows":rows,
-            "n_columns":columns,
-            "dtypes":dtypes
+            "all_columns":metadata.column_list,
+            "n_rows":metadata.n_rows,
+            "n_columns":metadata.n_columns,
+            "dtypes":metadata.column_datatypes,
+            "column_deleted_status":metadata.column_deleted_status 
         }
 
         return respond(data=res)
@@ -503,16 +497,18 @@ def get_categorical_columns_info():
             err = "Dataset name is required"
             raise
 
-        df, err = load_dataset(dataset_name, user.id, user.email)
-        if err:
-            raise
-
-        # get the categorical columns
-        categorical_columns = df.select_dtypes(include=['object', 'bool']).columns.tolist()
+        dataset_file_name = get_dataset_name(user.id, dataset_name) # dataset_name = iris_1
+        
+        metadata = None
+         # Look if the copy of dataset exists and if it does, load dataset copy metadata otherwise load the original dataset metadata
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            metadata = MetaData.objects(dataset_file_name=dataset_file_name+"_copy").first_or_404(message=f"Dataset Metadata for {dataset_file_name}_copy not found")
+        else:
+            metadata = MetaData.objects(dataset_file_name=dataset_file_name).first_or_404(message=f"Dataset Metadata for {dataset_file_name} not found")
 
         res = {
-            "categorical_columns":categorical_columns,
-            "n_categorical_columns":len(categorical_columns),
+            "categorical_columns":metadata.categorical_column_list,
+            "n_categorical_columns":len(metadata.categorical_column_list),
         }
 
         return respond(data=res)
@@ -550,16 +546,18 @@ def get_numerical_columns_info():
             err = "Dataset name is required"
             raise
 
-        df, err = load_dataset(dataset_name, user.id, user.email)
-        if err:
-            raise
-
-        # get the numerical columns
-        numerical_columns = df.select_dtypes(exclude=['object', 'bool']).columns.tolist()
+        dataset_file_name = get_dataset_name(user.id, dataset_name) # dataset_name = iris_1
+        
+        metadata = None
+         # Look if the copy of dataset exists and if it does, load dataset copy metadata otherwise load the original dataset metadata
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            metadata = MetaData.objects(dataset_file_name=dataset_file_name+"_copy").first_or_404(message=f"Dataset Metadata for {dataset_file_name}_copy not found")
+        else:
+            metadata = MetaData.objects(dataset_file_name=dataset_file_name).first_or_404(message=f"Dataset Metadata for {dataset_file_name} not found")
 
         res = {
-            "numerical_columns":numerical_columns,
-            "n_numerical_columns":len(numerical_columns),
+            "numerical_columns":metadata.numerical_column_list,
+            "n_numerical_columns":len(metadata.numerical_column_list),
         }
 
         return respond(data=res)
@@ -620,6 +618,7 @@ def save_changes():
                 copy_metadata_dict["is_copy"] = False
                 copy_metadata_dict["is_copy_modified"] = False
                 copy_metadata_dict["dataset_file_name"] = dataset_name
+                copy_metadata_dict["column_deleted_status"] = {column:False for column in copy_metadata_dict["column_list"]}
                 og_metadata_obj.update(**copy_metadata_dict)
                 copy_metadata_obj.delete()
                 app.logger.info("Dataset '%s' metadata deleted successfully",str(dataset_name))
