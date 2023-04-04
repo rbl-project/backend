@@ -93,7 +93,7 @@ def get_missing_value_percentage():
             raise
         
         # Check if the given column_name is present in the dataset
-        if column_name not in df.columns.tolist() and column_name != "All Columns" and get_all_columns == False and metadata.is_copy == False:
+        if column_name not in metadata.column_list and metadata.column_deleted_status.get(column_name,None) == None and column_name != "All Columns" and get_all_columns == False :
             err = "Column not found"
             raise
         
@@ -102,20 +102,17 @@ def get_missing_value_percentage():
         if get_all_columns == False and column_name != "All Columns":
             cols = [column_name]
         else:
-            cols = metadata_og.column_list
+            cols = metadata.column_list
     
-        
         # Get the percentage of missing values in each column
         missing_value_data = []
         for col in cols:
             missing_percentage = 0
-            is_column_deleted = False
+            is_column_deleted = metadata.column_deleted_status.get(col,False)   
             
             # if the column is deleted from the copy of dataset then calculate the missing value percentage from the original dataset
-            if col not in metadata.column_list:
-                is_column_deleted = True
+            if is_column_deleted == True:
                 missing_percentage = round(df_og[col].isna().sum()/len(df_og[col]) * 100, 2)
-                
             # if the column is not deleted from the copy of dataset then calculate the missing value percentage
             else: 
                 missing_percentage = round(df[col].isna().sum()/len(df[col]) * 100, 2)
@@ -159,11 +156,9 @@ def get_missing_value_percentage():
             
             missing_value_data.insert(0, all_columns_missing_value_data)
         
-        
-        
+    
         # ================================ Main Logic Ends HERE =================================
 
-        
         
         
         # When user wants to get the missing value percentage of a particular column and that column is NOT "All Columns"
@@ -243,6 +238,11 @@ def impute_missing_value():
         
         # Load the metadata of Copy of the dataset
         metadata = MetaData.objects(dataset_file_name=copy_dataset_file_name).first_or_404(message=f"Metadata of {dataset_name} not found")
+        
+        # Check if the column is deleted from the copy of dataset
+        if column_name not in metadata.column_list:
+            err = f"Column '{column_name}' not Found in the dataset"
+            raise
         
         # Get the datatype of the column
         column_dtype = None

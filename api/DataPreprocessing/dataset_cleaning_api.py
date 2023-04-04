@@ -406,7 +406,7 @@ def drop_by_column_name():
         current_categorical_column_list = metadata_dict.get("categorical_column_list", [])
         current_numerical_column_list = metadata_dict.get("numerical_column_list", [])
         current_column_datatypes = metadata_dict.get("column_datatypes", {})
-        current_column_wise_missing_value = metadata_dict.get("column_wise_missing_value", {})
+        current_column_deleted_status = metadata_dict.get("column_deleted_status", {})
 
         for col in col_list:
             if col in current_column_list:
@@ -420,9 +420,10 @@ def drop_by_column_name():
 
             if col in current_column_datatypes:
                 del current_column_datatypes[col]
+            
+            if col in current_column_deleted_status:
+                current_column_deleted_status[col] = True
 
-            if col in current_column_wise_missing_value:
-                del current_column_wise_missing_value[col]
 
         del metadata_dict["_id"]
         metadata_obj.update(**metadata_dict)
@@ -508,7 +509,8 @@ def rename_column():
         current_categorical_column_list = metadata_dict.get("categorical_column_list", [])
         current_numerical_column_list = metadata_dict.get("numerical_column_list", [])
         current_column_datatypes = metadata_dict.get("column_datatypes", {})
-        current_column_wise_missing_value = metadata_dict.get("column_wise_missing_value", {})
+        current_column_deleted_status = metadata_dict.get("column_deleted_status", {})
+        
         # find current col names and replace them with new names
         for current_col_name, new_col_name in col_name_change_info.items():
             if current_col_name in current_column_list:
@@ -522,9 +524,9 @@ def rename_column():
             
             if current_col_name in current_column_datatypes:
                 current_column_datatypes[new_col_name] = current_column_datatypes.pop(current_col_name)
-            
-            if current_col_name in current_column_wise_missing_value:
-                current_column_wise_missing_value[new_col_name] = current_column_wise_missing_value.pop(current_col_name)
+
+            if current_col_name in current_column_deleted_status:
+                current_column_deleted_status[new_col_name] = current_column_deleted_status.pop(current_col_name)
         
         metadata_dict["column_list"] = current_column_list
 
