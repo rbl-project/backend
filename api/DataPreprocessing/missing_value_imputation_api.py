@@ -102,7 +102,7 @@ def get_missing_value_percentage():
         if get_all_columns == False and column_name != "All Columns":
             cols = [column_name]
         else:
-            cols = metadata.column_list
+            cols = list(metadata.column_deleted_status.keys())
     
         # Get the percentage of missing values in each column
         missing_value_data = []
@@ -240,7 +240,7 @@ def impute_missing_value():
         metadata = MetaData.objects(dataset_file_name=copy_dataset_file_name).first_or_404(message=f"Metadata of {dataset_name} not found")
         
         # Check if the column is deleted from the copy of dataset
-        if column_name not in metadata.column_list:
+        if column_name != "All Columns" and column_name not in metadata.column_list:
             err = f"Column '{column_name}' not Found in the dataset"
             raise
         
@@ -275,6 +275,9 @@ def impute_missing_value():
                     for key, value in updated_row_column_metadata.items():
                         metadata[key] = value
                         
+                    # Update the deleted_column_status in the metadata
+                    metadata["column_deleted_status"][column_name] = True
+                    
                     response_message = "Column dropped successfully"
                 
             # Imputation is MEAN, MEDIAN , MODE or Custom_Value    
@@ -362,7 +365,11 @@ def impute_missing_value():
                     updated_row_column_metadata = get_row_column_metadata(df)
                     for key, value in updated_row_column_metadata.items():
                         metadata[key] = value
-                    
+
+                    # Update the deleted_column_status in the metadata
+                    for column in columns_with_missing_value:
+                        metadata["column_deleted_status"][column] = True
+                                            
                     response_message = "Columns with missing value dropped successfully"
                     
             # Imputation is MEAN, MEDIAN , MODE or Custom_Value    
