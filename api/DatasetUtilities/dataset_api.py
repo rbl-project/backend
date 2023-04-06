@@ -11,6 +11,7 @@ from models.dataset_metadata_model import MetaData
 from utilities.methods import ( 
     check_dataset_copy_exists,
     delete_dataset_copy,
+    make_dataset_copy,
     get_dataset_name, 
     get_parquet_dataset_file_name, 
     get_user_directory,
@@ -569,6 +570,100 @@ def get_numerical_columns_info():
         return respond(error=err)
     
 
+# Api to get the min and max values of the numerical columns
+@datasetAPI.route("/get-numerical-columns-min-max", methods=["POST"])
+@jwt_required()
+def get_numerical_columns_min_max():
+    """
+        TAKES dataset name, Column Name, get_all_columns (Boolean) as input
+        PERFORMS fetch the min and max values of the numerical columns
+        RETURNS the min and max values of the numerical columns as response
+    """
+    err = None
+    try:
+        current_user = get_jwt_identity()
+        user = Users.query.filter_by(id=current_user["id"]).first()
+        if not user:
+            err = "No such user exits"
+            raise
+
+        if not request.is_json:
+            err="Missing JSON in request"
+            raise
+        
+        dataset_name = request.json.get("dataset_name")
+        if not dataset_name:
+            err = "Dataset name is required"
+            raise
+        
+        get_all_columns = request.json.get("get_all_columns")
+        if get_all_columns is None:
+            err = "all_columns is required"
+            raise
+        
+        column_name = request.json.get("column_name")
+        if get_all_columns == False and not column_name:
+            err = "Column name is required"
+            raise
+
+        dataset_file_name = get_dataset_name(user.id, dataset_name) # dataset_name = iris_1
+        
+        # Load the dataset
+        # Look if the copy of dataset exists and if it does, then rename the columns in that copy otherwise rename make a copy and rename the columns in that copy
+        if not check_dataset_copy_exists(dataset_name, user.id, user.email):
+            app.logger.info("Dataset copy of %s does not exist. Trying to make a copy of the dataset", dataset_name)
+            err = make_dataset_copy(dataset_name, user.id, user.email)
+            if err:
+                raise
+    
+        df, err = load_dataset_copy(dataset_name, user.id, user.email)
+        if err:
+            raise
+        
+        metadata = None
+         # Look if the copy of dataset exists and if it does, load dataset copy metadata otherwise load the original dataset metadata
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            metadata = MetaData.objects(dataset_file_name=dataset_file_name+"_copy").first_or_404(message=f"Dataset Metadata for {dataset_file_name}_copy not found")
+        else:
+            metadata = MetaData.objects(dataset_file_name=dataset_file_name).first_or_404(message=f"Dataset Metadata for {dataset_file_name} not found")
+     
+        numerical_columns = metadata.numerical_column_list
+        min_max_values = {}
+        
+        # If get_all_columns is True, then return the min and max values of all the numerical columns
+        if get_all_columns:
+            
+            min_values_dict = df[numerical_columns].min().to_dict()
+            max_values_dict = df[numerical_columns].max().to_dict()
+            
+            for column in numerical_columns:
+                min_max_values[column] = {
+                    "min":min_values_dict[column],
+                    "max":max_values_dict[column]
+                }
+            
+        # If get_all_columns is False, then return the min and max values of the column_name
+        else:
+            max_value = df[[column_name]].max().to_dict()[column_name]
+            min_value = df[[column_name]].min().to_dict()[column_name]
+            
+            min_max_values[column_name] = {
+                "min":min_value,
+                "max":max_value
+            }
+        
+        res = {
+            "min_max_values":min_max_values
+        }
+        
+        return respond(data=res)
+
+    except Exception as e:
+        log_error(err_msg="Error in fetching the Numerical Columns Min-Max Values", error=err, exception=e)
+        if not err:
+            err = "Error in fetching the Numerical Columns Min-Max Values"
+        return respond(error=err)
+    
 # Api to save the current dataset copy as the new dataset
 @datasetAPI.route("/save-changes", methods=["POST"])
 @jwt_required()
