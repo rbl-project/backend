@@ -626,7 +626,16 @@ def get_numerical_columns_min_max():
             metadata = MetaData.objects(dataset_file_name=dataset_file_name+"_copy").first_or_404(message=f"Dataset Metadata for {dataset_file_name}_copy not found")
         else:
             metadata = MetaData.objects(dataset_file_name=dataset_file_name).first_or_404(message=f"Dataset Metadata for {dataset_file_name} not found")
-     
+
+        if not metadata:
+            err = "Dataset Metadata not found"
+            raise
+        
+        # Check if Column Name is present in the dataset
+        if get_all_columns == False and (column_name not in metadata.numerical_column_list or column_name not in metadata.column_list):
+            err = "Column Name not found in the dataset"
+            raise
+        
         numerical_columns = metadata.numerical_column_list
         min_max_values = {}
         
