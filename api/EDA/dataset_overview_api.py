@@ -12,7 +12,9 @@ import json
 from flask_restful import Api
 from models.user_model import Users
 from utilities.respond import respond
-from utilities.methods import load_dataset, log_error
+from utilities.methods import get_dataset_name, load_dataset_copy, load_dataset, log_error, check_dataset_copy_exists
+
+from models.dataset_metadata_model import MetaData
 
 datasetOverviewAPI = Blueprint("datasetOverviewAPI", __name__)
 datasetOverviewAPI_restful = Api(datasetOverviewAPI)
@@ -88,7 +90,7 @@ def basic_information():
 @jwt_required()
 def describe_numerical_data():
     """
-        TAKES dataset name as input
+        TAKES dataset name, get_all_columns (BOOLEAN) and Column Name as input
         PERFORMS the fetching of describe numerical data
         RETURNS the describe numerical data as response
     """
@@ -108,20 +110,48 @@ def describe_numerical_data():
         if not dataset_name:
             err = "Dataset name is required"
             raise
-
-        df, err = load_dataset(dataset_name, user.id, user.email)
-        if err:
+        
+        get_all_columns = request.json.get("get_all_columns")
+        if get_all_columns is None:
+            err = "get_all_columns is required"
+            raise
+        
+        column_name = request.json.get("column_name")
+        if not get_all_columns and not column_name:
+            err = "Column name is required"
             raise
 
-        df_numerical = df.select_dtypes(exclude=['bool', 'object']) # https://note.nkmk.me/en/python-pandas-dtype-astype/#:~:text=Sponsored%20Link-,List%20of%20basic%20data%20types%20(dtype)%20in%20pandas,-The%20following%20is
+        dataset_file_name = get_dataset_name(user.id, dataset_name) # dataset_name = iris_1
         
+        # ======= Get Metada =======
+        # Look if the copy of dataset exists and if it does, load dataset copy otherwise load the original dataset
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            df,err = load_dataset_copy(dataset_name, user.id, user.email)
+            metadata = MetaData.objects(dataset_file_name=dataset_file_name+"_copy").first_or_404(message=f"Dataset Metadata for {dataset_file_name}_copy not found")
+            
+        else:
+            df,err = load_dataset(dataset_name, user.id, user.email)
+            metadata = MetaData.objects(dataset_file_name=dataset_file_name).first_or_404(message=f"Dataset Metadata for {dataset_file_name} not found")
+        
+        if err: 
+            raise
+        
+        if get_all_columns == False and (column_name not in metadata.numerical_column_list or column_name not in metadata.column_list):
+            err = "Column not Found"
+            raise
+            
+        if get_all_columns == False:
+            df_numerical = df[[column_name]]
+            numerical_columns = [column_name]
+        else:
+            df_numerical = df[metadata.numerical_column_list]
+            numerical_columns = metadata.numerical_column_list
+            
         df_numerical_described = {}
-        numerical_columns = []
         
-        if not df_numerical.empty:
+        if len(numerical_columns) > 0:
             df_numerical_described = df_numerical.describe().to_json(orient='columns')
             df_numerical_described = json.loads(df_numerical_described) 
-            numerical_columns = df_numerical.columns.tolist()
 
         col_sorted_desciption = []
         for col in numerical_columns:
@@ -129,12 +159,18 @@ def describe_numerical_data():
             temp["name"] = col
             temp["data_type"] = str(df_numerical[col].dtype)
             col_sorted_desciption.append(temp)
-
-        res = {
-            "columns":col_sorted_desciption,
-            "n_numerical_columns": df_numerical.shape[1],
-            "n_categorical_columns" : df.shape[1] - df_numerical.shape[1]
-        }
+            
+        res = {}
+        
+        if get_all_columns:
+            res = {
+                "columns":col_sorted_desciption,
+                "n_numerical_columns": df_numerical.shape[1],
+                "n_categorical_columns" : df.shape[1] - df_numerical.shape[1]
+            }
+        else:
+            res = col_sorted_desciption[0]
+                
 
         return respond(data=res)
     

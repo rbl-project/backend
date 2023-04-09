@@ -24,7 +24,7 @@ from api.User import user_api
 from api.DatasetUtilities import dataset_api
 from api.EDA import dataset_overview_api, data_correlation_api, graphs_api, tabular_representation_api
 from api.DataPreprocessing import dataset_cleaning_api, missing_value_imputation_api
-from api.FeatureEngineering import data_descretization_api
+from api.FeatureEngineering import data_discretization_api
 
 # Utility
 from utilities.respond import respond
@@ -150,7 +150,7 @@ def add_end_points(app):
     app.register_blueprint(missing_value_imputation_api.missingValueImputationAPI, url_prefix = "/api")
     
     # Feature Engineering
-    app.register_blueprint(data_descretization_api.dataDescretizationAPI, url_prefix = "/api")
+    app.register_blueprint(data_discretization_api.dataDiscretizationAPI, url_prefix = "/api")
     
 
 def configure_app(app):

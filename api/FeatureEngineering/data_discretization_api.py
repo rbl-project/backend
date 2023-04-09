@@ -1,4 +1,4 @@
-""" Data Descretization API """
+""" Data Discretization API """
 # FLASK
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -18,17 +18,17 @@ from models.dataset_metadata_model import MetaData
 import pandas as pd
 
 # BLUEPRINT
-dataDescretizationAPI = Blueprint("dataDescretizationAPI", __name__)
-dataDescretizationAPI_restful = Api(dataDescretizationAPI)
+dataDiscretizationAPI = Blueprint("dataDiscretizationAPI", __name__)
+dataDiscretizationAPI_restful = Api(dataDiscretizationAPI)
 
 
-# Api to perform data descretization
-@dataDescretizationAPI.route("/data-descretization", methods=["POST"])
+# Api to perform data discretization
+@dataDiscretizationAPI.route("/data-discretization", methods=["POST"])
 @jwt_required()
-def data_descretization():
+def data_discretization():
     """
         TAKES dataset_name, column_name, and range_list (start,end,category) as input
-        PERFORMS data descretization on the given column_name
+        PERFORMS data discretization on the given column_name
         RETURNS the dataset with the column_name discretized
     """
     err = None
@@ -81,21 +81,21 @@ def data_descretization():
         
         
         
-        # =============================================== # Data Descretization Logic Start Here ===============================================
+        # =============================================== # Data Discretization Logic Start Here ===============================================
         
         
-        # ================================================ # Data Descretization Logic End Here ================================================
+        # ================================================ # Data Discretization Logic End Here ================================================
         
         res={
-            "msg": "Data Descretization Successful",
+            "msg": "Data Discretization Successful",
         }
         
         return respond(data=res)
     
     except Exception as e:
-        log_error(err_msg="Error in Data Descretization", error=err, exception=e)
+        log_error(err_msg="Error in Data Discretization", error=err, exception=e)
         if not err:
-            err = "Error in Data Descretization"
+            err = "Error in Data Discretization"
         return respond(error=err)
     
 
