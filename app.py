@@ -163,7 +163,7 @@ def configure_app(app):
     app.config['MAX_CONTENT_LENGTH'] = ONE_GB 
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=5)
-    app.config['MONGODB_SETTINGS'] = { 'db': os.getenv("MONGODB_DATABASE_NAME"),'host': os.getenv("MONGODB_HOST"), 'port': int(os.getenv("MONGODB_PORT"))}
+    app.config['MONGODB_SETTINGS'] = [{'host': os.getenv("MONGODB_DATABASE_URL")}]
 
 def create_app():
     '''
