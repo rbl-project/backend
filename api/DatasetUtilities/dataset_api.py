@@ -11,6 +11,7 @@ from models.dataset_metadata_model import MetaData
 from utilities.methods import ( 
     check_dataset_copy_exists,
     delete_dataset_copy,
+    make_dataset_copy,
     get_dataset_name, 
     get_parquet_dataset_file_name, 
     get_user_directory,
@@ -568,7 +569,7 @@ def get_numerical_columns_info():
             err = "Error in fetching the Numerical Columns List"
         return respond(error=err)
     
-
+    
 # Api to save the current dataset copy as the new dataset
 @datasetAPI.route("/save-changes", methods=["POST"])
 @jwt_required()
