@@ -644,7 +644,7 @@ def save_changes():
             os.rename(copy_dataset_file, dataset_file) # dataset_file is the og dataset file
             
             res = {
-                "msg":"Dataset changes saved successfully"
+                "msg":"Dataset changes Saved Successfully"
             }
 
             app.logger.info("Saved the changes in %s dataset", dataset_name)
@@ -699,7 +699,7 @@ def revert_changes():
         copy_metadata_obj.delete()
                 
         res = {
-            "msg":"Dataset changes reverted successfully"
+            "msg":"Dataset changes Reverted Successfully"
         }
 
         app.logger.info("Reverted the changes in %s dataset", dataset_name)

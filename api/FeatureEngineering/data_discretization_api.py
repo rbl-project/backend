@@ -105,6 +105,11 @@ def data_discretization():
         else:
             metadata = MetaData.objects(dataset_file_name=dataset_file_name).first_or_404(message=f"Dataset Metadata for {dataset_file_name} not found")
         
+        # Check if Column Contains Null Values
+        if df[column_name].isnull().values.any():
+            err = "Cannot descritize a column with null values. Please remove Null values using Missing Value Imputation Functionality"
+            raise
+        
         ### Check if Valid Inputs are given
         # Strategy should be one of the following
         strategy_list = ["uniform", "quantile", "kmeans", "custom"]
