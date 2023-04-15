@@ -19,22 +19,23 @@ from api.User.utilities import (
 userAPI = Blueprint("userAPI", __name__)
 userAPI_restful = Api(userAPI)
 
+# @jwt_required()
 @userAPI.route("/", methods=['GET'])
-@jwt_required()
 def welcome():
     """
         TAKES no input
         PERFORMS the welcome operation
         RETURNS the welcome message as response
     """
-    current_user = get_jwt_identity()
-    user = Users.query.filter_by(id = current_user["id"]).first()
+    # current_user = get_jwt_identity()
+    # user = Users.query.filter_by(id = current_user["id"]).first()
 
-    app.logger.info("Welcome %s", user.name)
+    # app.logger.info("Welcome %s", user.name)
 
-    res = { 
-        'msg':f'Hey {user.name}! Wish you the great data science session!'
-    }
+    # res = { 
+    #     'msg':f'Hey {user.name}! Wish you the great data science session!'
+    # }
+    res={ 'message':'hello'}
     return respond(data=res)
 
 
