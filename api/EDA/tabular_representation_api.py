@@ -51,9 +51,15 @@ def tabular_representation():
             err = "Dataset name is required"
             raise
 
-        df, err = load_dataset(dataset_name, user.id, user.email)
-        if err:
-            raise
+        # check if copy of the dataset exists
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            df, err = load_dataset_copy(dataset_name, user.id, user.email)
+            if err:
+                raise
+        else:
+            df, err = load_dataset(dataset_name, user.id, user.email)
+            if err:
+                raise
 
         # ================== Business Logic Start ==================
 

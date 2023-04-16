@@ -14,7 +14,7 @@ import seaborn as sns
 from flask_restful import Api
 from models.user_model import Users
 from utilities.respond import respond
-from utilities.methods import load_dataset, log_error
+from utilities.methods import check_dataset_copy_exists, load_dataset, load_dataset_copy, log_error
 
 graphsAPI = Blueprint("graphsAPI", __name__)
 graphsAPI_restful = Api(graphsAPI)
@@ -65,9 +65,15 @@ def generate_graph():
             err = "Column2 is required"
             raise
 
-        df, err = load_dataset(dataset_name, user.id, user.email)
-        if err:
-            raise
+        # check if copy of the dataset exists
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            df, err = load_dataset_copy(dataset_name, user.id, user.email)
+            if err:
+                raise
+        else:
+            df, err = load_dataset(dataset_name, user.id, user.email)
+            if err:
+                raise
         
         # Chart Styling
         plt.style.use('ggplot')
