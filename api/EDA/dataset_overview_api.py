@@ -44,9 +44,15 @@ def basic_information():
             err = "Dataset name is required"
             raise
 
-        df, err = load_dataset(dataset_name, user.id, user.email)
-        if err:
-            raise
+        # check if copy of the dataset exists
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            df, err = load_dataset_copy(dataset_name, user.id, user.email)
+            if err:
+                raise
+        else:
+            df, err = load_dataset(dataset_name, user.id, user.email)
+            if err:
+                raise
 
         # n_columns, n_rows
         shape = df.shape
@@ -206,9 +212,16 @@ def describe_categorical_data():
             err = "Dataset name is required"
             raise
 
-        df, err = load_dataset(dataset_name, user.id, user.email)
-        if err:
-            raise
+        
+        # check if copy of the dataset exists
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            df, err = load_dataset_copy(dataset_name, user.id, user.email)
+            if err:
+                raise
+        else:
+            df, err = load_dataset(dataset_name, user.id, user.email)
+            if err:
+                raise
 
         df_categorical = df.select_dtypes(include=['bool', 'object']) # https://note.nkmk.me/en/python-pandas-dtype-astype/#:~:text=Sponsored%20Link-,List%20of%20basic%20data%20types%20(dtype)%20in%20pandas,-The%20following%20is
 
@@ -273,9 +286,16 @@ def graphical_representation():
             err = "Dataset name is required"
             raise
 
-        df, err = load_dataset(dataset_name, user.id, user.email)
-        if err:
-            raise
+        
+        # check if copy of the dataset exists
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            df, err = load_dataset_copy(dataset_name, user.id, user.email)
+            if err:
+                raise
+        else:
+            df, err = load_dataset(dataset_name, user.id, user.email)
+            if err:
+                raise
         
         # Columns
         n_columns = len(df.columns)

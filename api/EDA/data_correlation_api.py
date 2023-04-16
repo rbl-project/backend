@@ -15,7 +15,7 @@ import seaborn as sns
 from flask_restful import Api
 from models.user_model import Users
 from utilities.respond import respond
-from utilities.methods import load_dataset, log_error
+from utilities.methods import check_dataset_copy_exists, load_dataset, load_dataset_copy, log_error
 
 dataCorrelationAPI = Blueprint("dataCorrelationAPI", __name__)
 dataCorrelationAPI_restful = Api(dataCorrelationAPI)
@@ -45,9 +45,16 @@ def numerical_columns():
             err = "Dataset name is required"
             raise
 
-        df, err = load_dataset(dataset_name, user.id, user.email)
-        if err:
-            raise
+        
+        # check if copy of the dataset exists
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            df, err = load_dataset_copy(dataset_name, user.id, user.email)
+            if err:
+                raise
+        else:
+            df, err = load_dataset(dataset_name, user.id, user.email)
+            if err:
+                raise
 
         # numerical columns
         numerical_columns = df.select_dtypes(exclude=['bool', 'object']).columns.tolist()
@@ -97,9 +104,16 @@ def correlation_matrix():
         #     err = "Column list is required"
         #     raise
 
-        df, err = load_dataset(dataset_name, user.id, user.email)
-        if err:
-            raise
+        
+        # check if copy of the dataset exists
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            df, err = load_dataset_copy(dataset_name, user.id, user.email)
+            if err:
+                raise
+        else:
+            df, err = load_dataset(dataset_name, user.id, user.email)
+            if err:
+                raise
         
         # Correlation Matrix && Column List
         column_list = []
@@ -187,9 +201,16 @@ def scatter_plot():
             err = "Column2 is required"
             raise
 
-        df, err = load_dataset(dataset_name, user.id, user.email)
-        if err:
-            raise
+        
+        # check if copy of the dataset exists
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            df, err = load_dataset_copy(dataset_name, user.id, user.email)
+            if err:
+                raise
+        else:
+            df, err = load_dataset(dataset_name, user.id, user.email)
+            if err:
+                raise
         
         # Scatter Plot
         df.plot.scatter(x=coulmn1, y=coulmn2)
@@ -241,9 +262,16 @@ def correlation_heatmap():
             err = "Column list is required"
             raise
 
-        df, err = load_dataset(dataset_name, user.id, user.email)
-        if err:
-            raise
+        
+        # check if copy of the dataset exists
+        if check_dataset_copy_exists(dataset_name, user.id, user.email):
+            df, err = load_dataset_copy(dataset_name, user.id, user.email)
+            if err:
+                raise
+        else:
+            df, err = load_dataset(dataset_name, user.id, user.email)
+            if err:
+                raise
         
         # Correlation Matrix && Heatmap
         correlation_matrix = df[included_column_list].corr().round(2)
