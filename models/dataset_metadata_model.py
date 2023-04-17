@@ -19,4 +19,4 @@ class MetaData(db.Document): # <dataset_name>_<user_id> OR <dataset_name>_<user_
     column_datatypes = db.DictField()
     numerical_column_list = db.ListField()
     categorical_column_list = db.ListField()
-    column_deleted_status = db.DictField()
+    deleted_column_list =  db.ListField()

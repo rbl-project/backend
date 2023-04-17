@@ -93,7 +93,7 @@ def get_missing_value_percentage():
             raise
         
         # Check if the given column_name is present in the dataset
-        if column_name not in metadata.column_list and metadata.column_deleted_status.get(column_name,None) == None and column_name != "All Columns" and get_all_columns == False :
+        if column_name not in metadata.column_list and column_name != "All Columns" and get_all_columns == False :
             err = "Column not found"
             raise
         
@@ -102,13 +102,13 @@ def get_missing_value_percentage():
         if get_all_columns == False and column_name != "All Columns":
             cols = [column_name]
         else:
-            cols = list(metadata.column_deleted_status.keys())
+            cols = metadata.column_list + metadata.deleted_column_list
     
         # Get the percentage of missing values in each column
         missing_value_data = []
         for col in cols:
             missing_percentage = 0
-            is_column_deleted = metadata.column_deleted_status.get(col,False)   
+            is_column_deleted = True if col in metadata.deleted_column_list else False  
             
             # if the column is deleted from the copy of dataset then calculate the missing value percentage from the original dataset
             if is_column_deleted == True:
@@ -275,8 +275,8 @@ def impute_missing_value():
                     for key, value in updated_row_column_metadata.items():
                         metadata[key] = value
                         
-                    # Update the deleted_column_status in the metadata
-                    metadata["column_deleted_status"][column_name] = True
+                    # Update in the metadata
+                    metadata.deleted_column_list.append(column_name)
                     
                     response_message = "Column dropped successfully"
                 
@@ -368,7 +368,8 @@ def impute_missing_value():
 
                     # Update the deleted_column_status in the metadata
                     for column in columns_with_missing_value:
-                        metadata["column_deleted_status"][column] = True
+                        # Update in the metadata
+                        metadata.deleted_column_list.append(column)
                                             
                     response_message = "Columns with missing value dropped successfully"
                     

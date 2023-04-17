@@ -83,7 +83,7 @@ def upload_dataset():
         column_datatypes = df.dtypes.astype(str).to_dict() # Dictionary of column name and its type
         numerical_column_list = df.select_dtypes(exclude=['object', 'bool']).columns.tolist() # List of numerical columns
         categorical_column_list = df.select_dtypes(include=['object', 'bool']).columns.tolist() # List of categorical columns
-        column_deleted_status = {column:False for column in column_list} # Dictionary of column name and its deleted status
+        deleted_column_list =  [] # List of deleted columns
 
         
         # Create the metadata object
@@ -105,7 +105,7 @@ def upload_dataset():
             column_datatypes = column_datatypes,
             numerical_column_list = numerical_column_list,
             categorical_column_list = categorical_column_list,
-            column_deleted_status = column_deleted_status
+            deleted_column_list =  deleted_column_list
         )
         
         # If Metadata already exists for the dataset then delete it and create a new one
@@ -429,18 +429,8 @@ def get_all_columns_info():
         for column in metadata.categorical_column_list:
             values[column] = df[column].unique().tolist()[0:100]
 
-        # get the unique values of categorical column which have less than 100 unique values
-        '''
-        values = {}
-        final_categorical_columns = []
-        for column in categorical_columns:
-            if len(df[column].unique()) <= 100:
-                final_categorical_columns.append(column)
-                values[column] = df[column].unique().tolist()
-        '''
 
         res = {
-            # "categorical_columns":final_categorical_columns,
             "categorical_columns":metadata.categorical_column_list,
             "numerical_columns":metadata.numerical_column_list,
             "categorical_values": values,
@@ -448,7 +438,7 @@ def get_all_columns_info():
             "n_rows":metadata.n_rows,
             "n_columns":metadata.n_columns,
             "dtypes":metadata.column_datatypes,
-            "column_deleted_status":metadata.column_deleted_status 
+            "deleted_column_list":metadata.deleted_column_list 
         }
 
         return respond(data=res)
@@ -619,7 +609,7 @@ def save_changes():
                 copy_metadata_dict["is_copy"] = False
                 copy_metadata_dict["is_copy_modified"] = False
                 copy_metadata_dict["dataset_file_name"] = dataset_name
-                copy_metadata_dict["column_deleted_status"] = {column:False for column in copy_metadata_dict["column_list"]}
+                copy_metadata_dict["deleted_column_list"] = []
                 og_metadata_obj.update(**copy_metadata_dict)
                 copy_metadata_obj.delete()
                 app.logger.info("Dataset '%s' metadata deleted successfully",str(dataset_name))
@@ -691,10 +681,6 @@ def revert_changes():
             raise
         
         copy_metadata_obj = MetaData.objects(dataset_file_name=dataset_name).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
-        # copy_metadata_obj_dict = copy_metadata_obj.to_mongo().to_dict()
-        # if not copy_metadata_obj_dict.get("is_copy_modified"):
-        #     err = "No changes detected in the current dataset"
-        #     raise
         
         copy_metadata_obj.delete()
                 
