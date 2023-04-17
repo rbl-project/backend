@@ -278,7 +278,7 @@ def data_discretization():
             
         # Update the metadata for Deleted Columns
         if encoding_type == "onehot" or encoding_type == "onehot-dense":
-            metadata["column_deleted_status"][column_name] = True
+            metadata["deleted_column_list"][column_name] = True
             
         # Update the metadata of the dataset
         metadata.is_copy_modified = True

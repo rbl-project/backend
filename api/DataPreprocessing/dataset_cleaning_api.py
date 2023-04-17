@@ -406,7 +406,7 @@ def drop_by_column_name():
         current_categorical_column_list = metadata_dict.get("categorical_column_list", [])
         current_numerical_column_list = metadata_dict.get("numerical_column_list", [])
         current_column_datatypes = metadata_dict.get("column_datatypes", {})
-        current_column_deleted_status = metadata_dict.get("column_deleted_status", {})
+        current_deleted_column_list =  metadata_dict.get("deleted_column_list", {})
 
         for col in col_list:
             if col in current_column_list:
@@ -509,7 +509,7 @@ def rename_column():
         current_categorical_column_list = metadata_dict.get("categorical_column_list", [])
         current_numerical_column_list = metadata_dict.get("numerical_column_list", [])
         current_column_datatypes = metadata_dict.get("column_datatypes", {})
-        current_column_deleted_status = metadata_dict.get("column_deleted_status", {})
+        current_deleted_column_list =  metadata_dict.get("deleted_column_list", {})
         
         # find current col names and replace them with new names
         for current_col_name, new_col_name in col_name_change_info.items():
