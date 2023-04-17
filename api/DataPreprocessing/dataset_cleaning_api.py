@@ -13,7 +13,8 @@ from utilities.methods import (
     log_error, 
     make_dataset_copy, 
     check_dataset_copy_exists, 
-    save_dataset_copy
+    save_dataset_copy,
+    get_row_column_metadata
 )
 
 # MODELS
@@ -390,43 +391,23 @@ def drop_by_column_name():
 
         # ================== Business Logic End ==================
 
-        shape = df.shape
         save_dataset_copy(df, dataset_name, user.id, user.email)
 
         dataset_name_copy = get_dataset_name( user.id, dataset_name) + "_copy"
         metadata_obj = MetaData.objects(dataset_file_name=dataset_name_copy).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
-        metadata_dict = metadata_obj.to_mongo().to_dict()
+        
+        # Metadata updation
+        updated_row_column_metadata = get_row_column_metadata(df)
+        for key, value in updated_row_column_metadata.items():
+            metadata_obj[key] = value
 
-        metadata_dict["is_copy_modified"] = True
-        metadata_dict["n_rows"] = shape[0]
-        metadata_dict["n_columns"] = shape[1]
-        metadata_dict["n_values"] = shape[0] * shape[1]
-
-        current_column_list = metadata_dict.get("column_list", [])
-        current_categorical_column_list = metadata_dict.get("categorical_column_list", [])
-        current_numerical_column_list = metadata_dict.get("numerical_column_list", [])
-        current_column_datatypes = metadata_dict.get("column_datatypes", {})
-        current_deleted_column_list =  metadata_dict.get("deleted_column_list", {})
-
+        #Update Deleted columns
         for col in col_list:
-            if col in current_column_list:
-                current_column_list.remove(col)
-
-            if col in current_categorical_column_list:
-                current_categorical_column_list.remove(col)
-
-            if col in current_numerical_column_list:
-                current_numerical_column_list.remove(col)
-
-            if col in current_column_datatypes:
-                del current_column_datatypes[col]
+            metadata_obj.deleted_column_list.append(col) 
             
-            if col in current_column_deleted_status:
-                current_column_deleted_status[col] = True
-
-
-        del metadata_dict["_id"]
-        metadata_obj.update(**metadata_dict)
+        # Update the metadata of the dataset
+        metadata_obj.is_copy_modified = True
+        metadata_obj.save()
 
         res = {
             "msg": "Columns dropped successfully",
@@ -503,36 +484,14 @@ def rename_column():
         dataset_name_copy = get_dataset_name( user.id, dataset_name) + "_copy"
 
         metadata_obj = MetaData.objects(dataset_file_name=dataset_name_copy).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
-        metadata_dict = metadata_obj.to_mongo().to_dict()
-        
-        current_column_list = metadata_dict.get("column_list", [])
-        current_categorical_column_list = metadata_dict.get("categorical_column_list", [])
-        current_numerical_column_list = metadata_dict.get("numerical_column_list", [])
-        current_column_datatypes = metadata_dict.get("column_datatypes", {})
-        current_deleted_column_list =  metadata_dict.get("deleted_column_list", {})
-        
-        # find current col names and replace them with new names
-        for current_col_name, new_col_name in col_name_change_info.items():
-            if current_col_name in current_column_list:
-                current_column_list[current_column_list.index(current_col_name)] = new_col_name
+       # Metadata updation
+        updated_row_column_metadata = get_row_column_metadata(df)
+        for key, value in updated_row_column_metadata.items():
+            metadata_obj[key] = value
             
-            if current_col_name in current_categorical_column_list:
-                current_categorical_column_list[current_categorical_column_list.index(current_col_name)] = new_col_name
-            
-            if current_col_name in current_numerical_column_list:
-                current_numerical_column_list[current_numerical_column_list.index(current_col_name)] = new_col_name
-            
-            if current_col_name in current_column_datatypes:
-                current_column_datatypes[new_col_name] = current_column_datatypes.pop(current_col_name)
-
-            if current_col_name in current_column_deleted_status:
-                current_column_deleted_status[new_col_name] = current_column_deleted_status.pop(current_col_name)
-        
-        metadata_dict["column_list"] = current_column_list
-
-        metadata_dict["is_copy_modified"] = True
-        del metadata_dict["_id"]
-        metadata_obj.update(**metadata_dict)
+        # Update the metadata of the dataset
+        metadata_obj.is_copy_modified = True
+        metadata_obj.save()
 
         res = {
             "msg": "Column names changed successfully",
@@ -635,11 +594,9 @@ def find_and_replace():
         dataset_name_copy = get_dataset_name( user.id, dataset_name) + "_copy"
 
         metadata_obj = MetaData.objects(dataset_file_name=dataset_name_copy).first_or_404(message=f"Metadata for '{dataset_name}' does not exists")
-        metadata_dict = metadata_obj.to_mongo().to_dict()
 
-        metadata_dict["is_copy_modified"] = True
-        del metadata_dict["_id"]
-        metadata_obj.update(**metadata_dict)
+        metadata_obj.is_copy_modified = True
+        metadata_obj.save()
 
         res = {
             "msg": "Find and replace operation performed successfully",
